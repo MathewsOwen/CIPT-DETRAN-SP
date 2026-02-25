@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN 3D - HARD MODE</title>
+    <title>DETRAN 3D - ULTRA GRAPHICS</title>
     <style> 
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; } 
         #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; }
-        .timer { font-size: 40px; font-weight: bold; color: #333; background: white; padding: 10px 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .timer { font-size: 40px; font-weight: bold; color: #333; background: white; padding: 10px 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-bottom: 4px solid #ccc; }
     </style>
 </head>
 <body>
@@ -16,7 +16,7 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+        scene.fog = new THREE.Fog(0x87CEEB, 10, 120);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -24,42 +24,64 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(10, 20, 10);
+        // LUZ AMBIENTE (Resolve o problema das rodas sumindo)
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7)); 
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+        sun.position.set(5, 20, 10);
         sun.castShadow = true;
         scene.add(sun);
 
+        // PISTA COM TEXTURA MELHORADA
         const floor = new THREE.Group();
-        const grass = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshPhongMaterial({color: 0x7cfc00}));
+        const grass = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshPhongMaterial({color: 0x567d46}));
         grass.rotation.x = -Math.PI / 2; grass.receiveShadow = true; floor.add(grass);
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(16, 200), new THREE.MeshPhongMaterial({color: 0x333333}));
+        
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(16, 400), new THREE.MeshPhongMaterial({color: 0x222222}));
         road.rotation.x = -Math.PI / 2; road.position.y = 0.01; road.receiveShadow = true; floor.add(road);
+
+        // FAIXAS AMARELAS (Com brilho próprio para não sumirem)
+        for(let i = -200; i < 200; i+=10) {
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 5), new THREE.MeshBasicMaterial({color: 0xffd700}));
+            stripe.rotation.x = -Math.PI / 2; stripe.position.set(0, 0.02, i);
+            floor.add(stripe);
+        }
         scene.add(floor);
 
+        // CARRO MODELADO (Com Rodas que aparecem!)
         const car = new THREE.Group();
-        const carBody = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 4.5), new THREE.MeshPhongMaterial({color: 0xd32f2f}));
-        carBody.position.y = 0.5; carBody.castShadow = true; car.add(carBody);
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 2), new THREE.MeshPhongMaterial({color: 0x222222, opacity: 0.8, transparent: true}));
-        cabin.position.set(0, 1.1, -0.2); car.add(cabin);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 4.5), new THREE.MeshPhongMaterial({color: 0xd32f2f}));
+        body.position.y = 0.6; body.castShadow = true; car.add(body);
+        
+        const windows = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.6, 2.2), new THREE.MeshPhongMaterial({color: 0x111111}));
+        windows.position.set(0, 1.2, -0.2); car.add(windows);
 
-        const spotlight = new THREE.SpotLight(0xffffff, 2, 20, Math.PI/4);
-        spotlight.position.set(0, 1, -2);
-        spotlight.target.position.set(0, 0, -10);
-        car.add(spotlight); car.add(spotlight.target);
+        // RODAS 3D REAIS
+        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.5, 32);
+        const wheelMat = new THREE.MeshPhongMaterial({color: 0x000000});
+        const positions = [[1.1, 0.4, 1.4], [-1.1, 0.4, 1.4], [1.1, 0.4, -1.4], [-1.1, 0.4, -1.4]];
+        positions.forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            wheel.rotation.z = Math.PI/2;
+            wheel.position.set(pos[0], pos[1], pos[2]);
+            car.add(wheel);
+        });
+
         scene.add(car);
 
+        // CONES COM BASE (Estilo Detran)
         const cones = [];
         function createCone(x, z) {
-            const cone = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1, 16), new THREE.MeshPhongMaterial({color: 0xFF4500}));
-            body.position.y = 0.5; cone.add(body);
-            cone.position.set(x, 0, z);
-            scene.add(cone);
-            cones.push({ mesh: cone, hit: false });
+            const coneGroup = new THREE.Group();
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.8), new THREE.MeshPhongMaterial({color: 0x111}));
+            const body = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1, 16), new THREE.MeshPhongMaterial({color: 0xff4500}));
+            body.position.y = 0.5; coneGroup.add(base, body);
+            coneGroup.position.set(x, 0, z);
+            scene.add(coneGroup);
+            cones.push({ mesh: coneGroup, hit: false });
         }
-        [-4, 4].forEach(x => { for(let z=-30; z<=10; z+=10) createCone(x, z); });
+        [-4, 4].forEach(x => { for(let z=-40; z<=20; z+=10) createCone(x, z); });
 
+        // CONTROLES E ANIMAÇÃO
         let startTime, running = false;
         const keys = {};
         window.addEventListener('keydown', e => { 
@@ -70,17 +92,18 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            if(keys['ArrowUp']) car.translateZ(-0.15);
+            if(keys['ArrowUp']) car.translateZ(-0.18);
             if(keys['ArrowDown']) car.translateZ(0.12);
-            if(keys['ArrowLeft']) car.rotation.y += 0.04;
-            if(keys['ArrowRight']) car.rotation.y -= 0.04;
+            if(keys['ArrowLeft']) car.rotation.y += 0.045;
+            if(keys['ArrowRight']) car.rotation.y -= 0.045;
 
+            // FÍSICA DE IMPACTO
             cones.forEach(c => {
                 const dist = car.position.distanceTo(c.mesh.position);
-                if (dist < 1.4 && !c.hit) {
+                if (dist < 1.6 && !c.hit) {
                     c.hit = true;
-                    c.mesh.rotation.z = Math.PI / 2.2;
-                    c.mesh.position.y = 0.2;
+                    c.mesh.rotation.z = Math.PI / 2.5;
+                    c.mesh.position.y = 0.1;
                 }
             });
 
@@ -88,7 +111,7 @@
                 const d = new Date(Date.now() - startTime);
                 document.getElementById('timerDisplay').innerText = d.toISOString().substr(14, 8);
             }
-            const offset = new THREE.Vector3(0, 5, 10).applyMatrix4(car.matrixWorld);
+            const offset = new THREE.Vector3(0, 5, 12).applyMatrix4(car.matrixWorld);
             camera.position.lerp(offset, 0.1);
             camera.lookAt(car.position);
             renderer.render(scene, camera);
