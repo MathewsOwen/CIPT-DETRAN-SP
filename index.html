@@ -2,16 +2,16 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | SIMULADOR OFICIAL</title>
+    <title>DETRAN-SP 3D | FERRARI ROMA FIX</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
-        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.85); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; box-shadow: 0 0 15px rgba(0,0,0,0.5); z-index: 100; }
-        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; z-index: 100; font-size: 14px; }
+        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.85); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; z-index: 100; }
+        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; z-index: 100; }
     </style>
 </head>
 <body>
     <div id="timer">00:00.00</div>
-    <div id="status">🏎️ Restaurando Ferrari Roma original...</div>
+    <div id="status">🏎️ Restaurando cores e brilho...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
@@ -20,34 +20,46 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 8000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputEncoding = THREE.sRGBEncoding; // VOLTA A COR REAL
+        
+        // --- ESSENCIAL PARA TIRAR O PRETO DO CARRO ---
+        renderer.outputEncoding = THREE.sRGBEncoding; 
+        renderer.physicallyCorrectLights = true;
         document.body.appendChild(renderer.domElement);
 
-        // ILUMINAÇÃO COMPLETA (Para tirar o preto do carro)
-        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-        sun.position.set(50, 100, 50);
-        scene.add(sun);
+        // ILUMINAÇÃO REFORÇADA
+        const ambientLight = new THREE.AmbientLight(0xffffff, 2.5); // Luz vinda de todos os lados
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        sunLight.position.set(10, 50, 10);
+        scene.add(sunLight);
 
         const loader = new GLTFLoader();
         let car, city, startTime = Date.now();
         let keys = {};
 
-        // CARREGAMENTO DAS FOTOS QUE VOCÊ MOSTROU
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
             
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                car.scale.set(6, 6, 6); // ESCALA 6 APROVADA
-                car.position.set(0, 0.15, 0); // ALTURA SEGURA
+                
+                // Forçar a cor em todos os materiais do carro caso estejam escuros
+                car.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.emissiveIntensity = 0; // Evita brilho falso
+                        child.material.needsUpdate = true;
+                    }
+                });
+
+                car.scale.set(6, 6, 6); 
+                car.position.set(0, 0.15, 0); 
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ TUDO PERFEITO! PODE ACELERAR.";
-                document.getElementById('status').style.color = "#00ff00";
+                document.getElementById('status').innerText = "✅ CORES RESTAURADAS! ACELERE.";
             });
         });
 
@@ -57,20 +69,17 @@
         function animate() {
             requestAnimationFrame(animate);
             if (car) {
-                // VELOCIDADE TURBO SOLICITADA
                 const speed = 1.2;
                 if (keys['ArrowUp']) car.translateZ(speed);
                 if (keys['ArrowDown']) car.translateZ(-speed/2);
                 if (keys['ArrowLeft']) car.rotation.y += 0.06;
                 if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-                // CÂMERA DE CORRIDA (VOLTOU!)
                 const offset = new THREE.Vector3(0, 3.5, -11).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
 
-            // CRONÔMETRO ESTILIZADO
             const delta = Date.now() - startTime;
             const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
             const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
@@ -80,12 +89,6 @@
             renderer.render(scene, camera);
         }
         animate();
-
-        window.onresize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        };
     </script>
 </body>
 </html>
