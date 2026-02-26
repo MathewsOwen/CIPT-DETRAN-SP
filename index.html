@@ -2,124 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN 3D - REALISTIC VERSION</title>
+    <title>DETRAN 3D - BUGATTI MODE</title>
     <style> 
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; } 
-        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; }
-        .timer { font-size: 42px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.6); padding: 10px 40px; border-radius: 10px; border: 2px solid #ff4500; backdrop-filter: blur(5px); }
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; } 
+        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
+        .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; display: inline-block; border: 2px solid #0056ff; }
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.9); padding: 20px; border-radius: 10px; z-index: 100; font-size: 20px; }
     </style>
 </head>
 <body>
+    <div id="loading">Carregando Bugatti... (Aguarde, o modelo é detalhado)</div>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
+
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { OBJLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/OBJLoader.js';
+        import { MTLLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/MTLLoader.js';
 
         const scene = new THREE.Scene();
-        // CÉU REALISTA COM DEGRADÊ
         scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 15, 150);
-
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.shadowMap.enabled = true;
-        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // ILUMINAÇÃO DE ESTÚDIO
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.9));
         const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(20, 40, 20);
+        sun.position.set(10, 20, 10);
         sun.castShadow = true;
-        sun.shadow.mapSize.width = 2048;
-        sun.shadow.mapSize.height = 2048;
         scene.add(sun);
 
-        // CHÃO COM TEXTURA DE GRAMA E ASFALTO
-        const world = new THREE.Group();
-        const grass = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshPhongMaterial({color: 0x3d5a2e}));
-        grass.rotation.x = -Math.PI / 2; grass.receiveShadow = true; world.add(grass);
+        // PISTA
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 2000), new THREE.MeshPhongMaterial({color: 0x1a1a1a}));
+        road.rotation.x = -Math.PI / 2; road.receiveShadow = true; scene.add(road);
+
+        // CARREGANDO MODELO
+        const carGroup = new THREE.Group();
+        const mtlLoader = new MTLLoader();
         
-        // Asfalto com brilho de material real
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(16, 1000), new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.8}));
-        road.rotation.x = -Math.PI / 2; road.position.y = 0.02; road.receiveShadow = true; world.add(road);
-
-        for(let i = -500; i < 500; i+=12) {
-            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 6), new THREE.MeshBasicMaterial({color: 0xffcc00}));
-            stripe.rotation.x = -Math.PI / 2; stripe.position.set(0, 0.03, i);
-            world.add(stripe);
-        }
-        scene.add(world);
-
-        // CARRO COM DESIGN MELHORADO
-        const car = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 4.5), new THREE.MeshStandardMaterial({color: 0xc62828, metalness: 0.5, roughness: 0.4}));
-        body.position.y = 0.7; body.castShadow = true; car.add(body);
-        
-        const cockpit = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 2.2), new THREE.MeshStandardMaterial({color: 0x050505, metalness: 0.9, roughness: 0.1}));
-        cockpit.position.set(0, 1.3, -0.2); car.add(cockpit);
-
-        const wheelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.5, 32);
-        const wheelMat = new THREE.MeshStandardMaterial({color: 0x111111});
-        [[1.1, 0.45, 1.5], [-1.1, 0.45, 1.5], [1.1, 0.45, -1.5], [-1.1, 0.45, -1.5]].forEach(p => {
-            const w = new THREE.Mesh(wheelGeo, wheelMat);
-            w.rotation.z = Math.PI/2; w.position.set(p[0], p[1], p[2]); car.add(w);
+        mtlLoader.load('bugatti.mtl', (materials) => {
+            materials.preload();
+            const objLoader = new OBJLoader();
+            objLoader.setMaterials(materials);
+            objLoader.load('bugatti.obj', (object) => {
+                carGroup.add(object);
+                // AJUSTES DE TAMANHO PARA A BUGATTI
+                object.scale.set(0.02, 0.02, 0.02); 
+                object.rotation.y = Math.PI; // Gira o carro para a direção certa
+                scene.add(carGroup);
+                document.getElementById('loading').style.display = 'none';
+            });
         });
-        scene.add(car);
 
-        // CONES E OBSTÁCULOS
-        const obstacles = [];
-        function addCone(x, z) {
-            const cone = new THREE.Group();
-            const b = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.8), new THREE.MeshStandardMaterial({color: 0x222}));
-            const c = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1, 16), new THREE.MeshStandardMaterial({color: 0xff6600}));
-            c.position.y = 0.5; cone.add(b, c);
-            cone.position.set(x, 0.05, z); scene.add(cone);
-            obstacles.push({mesh: cone, hit: false});
+        // CONES
+        const cones = [];
+        function createCone(x, z) {
+            const c = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.2, 16), new THREE.MeshPhongMaterial({color: 0xff4500}));
+            c.position.set(x, 0.6, z); scene.add(c);
+            cones.push({ mesh: c, hit: false });
         }
-        [-4, 4].forEach(x => { for(let z=-60; z<=20; z+=15) addCone(x, z); });
+        [-5, 5].forEach(x => { for(let z=-100; z<=20; z+=20) createCone(x, z); });
 
-        // SISTEMA DE PLACAS
-        function addSign(x, z, text) {
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4), new THREE.MeshStandardMaterial({color: 0x777}));
-            post.position.set(x, 2, z);
-            const board = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.1), new THREE.MeshStandardMaterial({color: 0xffffff}));
-            board.position.set(x, 3.5, z);
-            scene.add(post, board);
-        }
-        addSign(6, -10, "PARE");
-
-        // MOVIMENTO E LÓGICA
-        let startTime, running = false;
         const keys = {};
+        let startTime, running = false;
         window.addEventListener('keydown', e => { 
             keys[e.code] = true; 
             if(!running && e.code.includes('Arrow')) { running = true; startTime = Date.now(); }
         });
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        function update() {
-            requestAnimationFrame(update);
-            if(keys['ArrowUp']) car.translateZ(-0.2);
-            if(keys['ArrowDown']) car.translateZ(0.15);
-            if(keys['ArrowLeft']) car.rotation.y += 0.05;
-            if(keys['ArrowRight']) car.rotation.y -= 0.05;
+        function animate() {
+            requestAnimationFrame(animate);
+            if (carGroup && carGroup.children.length > 0) {
+                if(keys['ArrowUp']) carGroup.translateZ(-0.4); // Bugatti é rápida!
+                if(keys['ArrowDown']) carGroup.translateZ(0.2);
+                if(keys['ArrowLeft']) carGroup.rotation.y += 0.04;
+                if(keys['ArrowRight']) carGroup.rotation.y -= 0.04;
 
-            obstacles.forEach(o => {
-                if (car.position.distanceTo(o.mesh.position) < 1.7 && !o.hit) {
-                    o.hit = true; o.mesh.rotation.z = 1.4; o.mesh.position.y = 0.2;
-                }
-            });
+                // COLISÃO MELHORADA
+                cones.forEach(c => {
+                    const dist = carGroup.position.distanceTo(c.mesh.position);
+                    if (dist < 3 && !c.hit) {
+                        c.hit = true; c.mesh.rotation.z = 1.5;
+                    }
+                });
+
+                const offset = new THREE.Vector3(0, 6, 15).applyMatrix4(carGroup.matrixWorld);
+                camera.position.lerp(offset, 0.1);
+                camera.lookAt(carGroup.position);
+            }
 
             if(running) {
-                const diff = new Date(Date.now() - startTime);
-                document.getElementById('timerDisplay').innerText = diff.toISOString().substr(14, 8);
+                const d = new Date(Date.now() - startTime);
+                document.getElementById('timerDisplay').innerText = d.toISOString().substr(14, 8);
             }
-            camera.position.lerp(new THREE.Vector3(0, 6, 14).applyMatrix4(car.matrixWorld), 0.1);
-            camera.lookAt(car.position);
             renderer.render(scene, camera);
         }
-        update();
+        animate();
     </script>
 </body>
 </html>
