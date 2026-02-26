@@ -62,49 +62,40 @@
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        function animate() {
-            requestAnimationFrame(animate);
+      // No seu loop de animação
+function animate() {
+    requestAnimationFrame(animate);
 
-            if (car && city) {
-                // SUSPENSÃO
-                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 0.5, car.position.z);
-                raycasterChao.set(origemLaser, new THREE.Vector3(0, -1, 0));
-                
-                const intersecs = raycasterChao.intersectObject(city, true);
-                if (intersecs.length > 0) {
-                    car.position.y = intersecs[0].point.y + 0.01;
-                }
+    if (car && city) {
+        // --- SISTEMA ANTIAFOGAMENTO (Raycast) ---
+        // Criamos um laser que sai de dentro do carro e aponta para o chão
+        const raycaster = new THREE.Raycaster();
+        const posicaoLaser = new THREE.Vector3(car.position.x, car.position.y + 5, car.position.z);
+        raycaster.set(posicaoLaser, new THREE.Vector3(0, -1, 0));
 
-                // COLISÃO
-                const direcao = new THREE.Vector3();
-                car.getWorldDirection(direcao);
-                raycasterFrente.set(car.position, direcao);
-                const obstaculos = raycasterFrente.intersectObject(city, true);
-                
-                if (obstaculos.length > 0 && obstaculos[0].distance < 1.2) {
-                    podeAndar = false;
-                    document.getElementById('status').innerText = "⚠️ FREIE! MUITO PERTO.";
-                    document.getElementById('status').style.backgroundColor = "orange";
-                } else {
-                    podeAndar = true;
-                }
+        // Checamos se o laser atingiu a cidade
+        const interseccoes = raycaster.intersectObject(city, true);
 
-                // --- MOVIMENTAÇÃO MAIS RÁPIDA ---
-                if (keys['ArrowUp'] && podeAndar) car.translateZ(1.0); // Velocidade aumentada
-                if (keys['ArrowDown']) car.translateZ(-0.5);          // Ré aumentada
-                if (keys['ArrowLeft']) car.rotation.y += 0.06;
-                if (keys['ArrowRight']) car.rotation.y -= 0.06;
+        if (interseccoes.length > 0) {
+            // O ponto exato do asfalto é interseccoes[0].point.y
+            // Forçamos o carro a ficar um pouquinho acima desse ponto
+            car.position.y = interseccoes[0].point.y + 0.1;
+        }
 
-                // CÂMERA (Ajustada para escala 6)
-                const offset = new THREE.Vector3(0, 3, -10).applyMatrix4(car.matrixWorld);
-                camera.position.lerp(offset, 0.1);
-                camera.lookAt(car.position);
-            }
+        // --- MOVIMENTAÇÃO (Já ajustada para a escala 6) ---
+        if (keys['ArrowUp'] && podeAndar) car.translateZ(1.0);
+        if (keys['ArrowDown']) car.translateZ(-0.5);
+        if (keys['ArrowLeft']) car.rotation.y += 0.06;
+        if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-            const tempo = new Date(Date.now() - startTime);
-            document.getElementById('timerDisplay').innerText = tempo.toISOString().substr(14, 8);
+        // Atualiza a câmera para seguir o carro na nova altura
+        const offset = new THREE.Vector3(0, 3, -10).applyMatrix4(car.matrixWorld);
+        camera.position.lerp(offset, 0.1);
+        camera.lookAt(car.position);
+    }
 
-            renderer.render(scene, camera);
+    renderer.render(scene, camera);
+}
         }
 
         window.addEventListener('resize', () => {
