@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | AJUSTE FINO</title>
+    <title>DETRAN-SP 3D | ESCALA REALISTA 8</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; }
@@ -12,7 +12,7 @@
 </head>
 <body>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
-    <div id="status">🏎️ Aplicando escala 10...</div>
+    <div id="status">🏎️ Aplicando escala 8 (Ajuste Final)...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
@@ -48,13 +48,13 @@
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
                 
-                // --- ESCALA 10: O AJUSTE QUE FALTAVA ---
-                car.scale.set(10, 10, 10); 
+                // --- ESCALA 8: REDUZIDO PARA ENCAIXAR NA RUA ---
+                car.scale.set(8, 8, 8); 
                 
                 car.position.set(0, 1, 0); 
                 scene.add(car);
                 
-                document.getElementById('status').innerText = "✅ ESCALA 10 APLICADA. AGORA ESTÁ REALISTA!";
+                document.getElementById('status').innerText = "✅ ESCALA 8: PROPORÇÃO DE SIMULADOR ATIVADA.";
                 document.getElementById('status').style.backgroundColor = "green";
             });
         });
@@ -66,38 +66,38 @@
             requestAnimationFrame(animate);
 
             if (car && city) {
-                // SUSPENSÃO (Laser mais baixo para escala menor)
-                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 2, car.position.z);
+                // SUSPENSÃO (Ajustada para o carro minúsculo)
+                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 1, car.position.z);
                 raycasterChao.set(origemLaser, new THREE.Vector3(0, -1, 0));
                 
                 const intersecs = raycasterChao.intersectObject(city, true);
                 if (intersecs.length > 0) {
-                    car.position.y = intersecs[0].point.y + 0.02;
+                    car.position.y = intersecs[0].point.y + 0.01;
                 }
 
-                // COLISÃO FRONTAL (Ajustada para o bico do carro pequeno)
+                // COLISÃO
                 const direcao = new THREE.Vector3();
                 car.getWorldDirection(direcao);
                 raycasterFrente.set(car.position, direcao);
                 const obstaculos = raycasterFrente.intersectObject(city, true);
                 
-                if (obstaculos.length > 0 && obstaculos[0].distance < 2) {
+                if (obstaculos.length > 0 && obstaculos[0].distance < 1.5) {
                     podeAndar = false;
-                    document.getElementById('status').innerText = "⚠️ CUIDADO COM O MEIO-FIO!";
+                    document.getElementById('status').innerText = "⚠️ CUIDADO: MUITO PRÓXIMO!";
                     document.getElementById('status').style.backgroundColor = "orange";
                 } else {
                     podeAndar = true;
                 }
 
-                // MOVIMENTAÇÃO (Suave para o tamanho 10)
-                if (keys['ArrowUp'] && podeAndar) car.translateZ(0.6); 
-                if (keys['ArrowDown']) car.translateZ(-0.3);
-                if (keys['ArrowLeft']) car.rotation.y += 0.05;
-                if (keys['ArrowRight']) car.rotation.y -= 0.05;
+                // MOVIMENTAÇÃO (Velocidade de cruzeiro)
+                if (keys['ArrowUp'] && podeAndar) car.translateZ(0.5); 
+                if (keys['ArrowDown']) car.translateZ(-0.25);
+                if (keys['ArrowLeft']) car.rotation.y += 0.06;
+                if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-                // CÂMERA (Visão baixa de esportivo)
-                // Y=5 (altura), Z=-12 (distância)
-                const offset = new THREE.Vector3(0, 5, -12).applyMatrix4(car.matrixWorld);
+                // CÂMERA (Focada no carro escala 8)
+                // Y=3.5 (altura), Z=-10 (distância)
+                const offset = new THREE.Vector3(0, 3.5, -10).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
