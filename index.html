@@ -2,52 +2,50 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | VERSÃO ULTRA ESTÁVEL</title>
+    <title>DETRAN-SP 3D | VERSÃO LIGHT</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
         #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10; }
         .timer { font-size: 26px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 8px 20px; border-radius: 8px; border: 2px solid #ed1c24; }
-        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.9); padding: 10px; font-weight: bold; z-index: 100; }
+        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.9); padding: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
-    <div id="status">🚀 Iniciando Motor Turbo (Escala 6)...</div>
+    <div id="status">🚀 Carregando Modo Estável (Escala 6)...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        // --- CENA BÁSICA ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-        sun.position.set(10, 50, 10);
-        scene.add(sun);
-
+        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+        
         const loader = new GLTFLoader();
         let car, city;
         let keys = {};
-        const raycaster = new THREE.Raycaster();
 
-        // --- CARREGAMENTO ---
+        // 1. CARREGAR CIDADE
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
             
+            // 2. CARREGAR FERRARI
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                car.scale.set(6, 6, 6); // Escala pedida
-                car.position.set(0, 0.5, 0); 
+                car.scale.set(6, 6, 6); 
+                
+                // AJUSTE DE ALTURA FIXA: 0.15 para não afundar nem travar calculando
+                car.position.set(0, 0.15, 0); 
+                
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ MOTOR LIGADO! ACELERE!";
+                document.getElementById('status').innerText = "✅ ESTÁVEL E RÁPIDO!";
             });
         });
 
@@ -56,41 +54,22 @@
 
         function animate() {
             requestAnimationFrame(animate);
-
-            if (car && city) {
-                // --- FIXAÇÃO NO CHÃO (Evita o carro sumir na rua) ---
-                const down = new THREE.Vector3(0, -1, 0);
-                raycaster.set(new THREE.Vector3(car.position.x, car.position.y + 2, car.position.z), down);
-                const hit = raycaster.intersectObject(city, true);
-                if (hit.length > 0) {
-                    car.position.y = hit[0].point.y + 0.05; // Mantém 0.05 acima do asfalto
-                }
-
-                // --- MOVIMENTAÇÃO TURBO ---
-                const speed = 1.0; // Velocidade aumentada
-                const rotationSpeed = 0.06;
-
+            if (car) {
+                // MOVIMENTAÇÃO TURBO (Sem cálculos de física pesada)
+                const speed = 1.2; 
                 if (keys['ArrowUp']) car.translateZ(speed);
                 if (keys['ArrowDown']) car.translateZ(-speed/2);
-                if (keys['ArrowLeft']) car.rotation.y += rotationSpeed;
-                if (keys['ArrowRight']) car.rotation.y -= rotationSpeed;
+                if (keys['ArrowLeft']) car.rotation.y += 0.06;
+                if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-                // --- CÂMERA SUAVE ---
+                // CÂMERA
                 const offset = new THREE.Vector3(0, 3, -10).applyMatrix4(car.matrixWorld);
-                camera.position.lerp(offset, 0.1);
+                camera.position.copy(offset); // .copy é mais leve que .lerp para computadores que travam
                 camera.lookAt(car.position);
             }
-
             renderer.render(scene, camera);
         }
         animate();
-
-        // Ajuste de tela
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
