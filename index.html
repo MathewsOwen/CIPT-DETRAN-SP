@@ -2,14 +2,14 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN 3D - FERRARI ROMA</title>
+    <title>DETRAN 3D - CIDADE REAL</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; z-index: 100; }
     </style>
 </head>
 <body>
-    <div id="status">Buscando arquivo: low_poly_ferrari_roma.glb...</div>
+    <div id="status">A carregar cenário e veículo...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
@@ -18,45 +18,41 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 5, 12);
-
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        // Luzes para destacar a lataria
         scene.add(new THREE.AmbientLight(0xffffff, 1.5));
         const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(5, 10, 7);
+        sun.position.set(50, 100, 50);
         scene.add(sun);
 
-        // Chão e Pista
-        scene.add(new THREE.GridHelper(200, 50));
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 2000), new THREE.MeshStandardMaterial({color: 0x222222}));
-        road.rotation.x = -Math.PI / 2;
-        scene.add(road);
-
-        let car;
         const loader = new GLTFLoader();
+        let car, city;
 
-        // USANDO O NOME EXATO DO SEU ARQUIVO
-        loader.load('low_poly_ferrari_roma.glb', (gltf) => {
-            car = gltf.scene;
-            
-            // Ajuste de escala (como é low poly, 1.5 deve ser o tamanho ideal)
-            car.scale.set(1.5, 1.5, 1.5);
-            
-            scene.add(car);
-            document.getElementById('status').innerText = "✅ FERRARI ROMA CARREGADA! Use as setas.";
-        }, 
-        (xhr) => {
+        // 1. CARREGAR A CIDADE
+        loader.load('city_-_cidade (2).glb', (gltf) => {
+            city = gltf.scene;
+            scene.add(city);
+            console.log("Cidade carregada!");
+
+            // 2. CARREGAR A FERRARI (dentro da função da cidade)
+            loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
+                car = gltfCar.scene;
+                car.scale.set(2, 2, 2); // Ajusta o tamanho do carro
+                
+                // Posição inicial (podes precisar ajustar estes números para não nascer num prédio)
+                car.position.set(0, 0.5, 0); 
+                
+                scene.add(car);
+                document.getElementById('status').innerText = "✅ TUDO PRONTO! Conduz com as setas.";
+                document.getElementById('status').style.backgroundColor = "green";
+            });
+        }, (xhr) => {
             const p = Math.round((xhr.loaded / xhr.total) * 100);
-            document.getElementById('status').innerText = "Carregando: " + p + "%";
-        },
-        (error) => {
-            document.getElementById('status').innerText = "❌ ERRO: O arquivo 'low_poly_ferrari_roma.glb' não está no GitHub!";
+            document.getElementById('status').innerText = "A carregar cidade: " + p + "%";
         });
 
         const keys = {};
@@ -66,12 +62,14 @@
         function animate() {
             requestAnimationFrame(animate);
             if (car) {
-                if(keys['ArrowUp']) car.translateZ(0.4); 
-                if(keys['ArrowDown']) car.translateZ(-0.2);
-                if(keys['ArrowLeft']) car.rotation.y += 0.05;
-                if(keys['ArrowRight']) car.rotation.y -= 0.05;
+                // Movimentação
+                if(keys['ArrowUp']) car.translateZ(0.6); 
+                if(keys['ArrowDown']) car.translateZ(-0.3);
+                if(keys['ArrowLeft']) car.rotation.y += 0.04;
+                if(keys['ArrowRight']) car.rotation.y -= 0.04;
 
-                const offset = new THREE.Vector3(0, 4, -10).applyMatrix4(car.matrixWorld);
+                // Câmara segue o carro (visão GTA)
+                const offset = new THREE.Vector3(0, 5, -15).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
