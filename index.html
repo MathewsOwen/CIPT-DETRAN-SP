@@ -2,21 +2,33 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN 3D - CIDADE REAL</title>
+    <title>DETRAN-SP 3D | SIMULADOR</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; z-index: 100; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Interface Superior (Cronômetro) */
+        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; }
+        .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; border: 2px solid #ed1c24; box-shadow: 0 0 15px rgba(237, 28, 36, 0.5); }
+        
+        /* Barra de Status Inferior */
+        #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-weight: bold; z-index: 100; transition: all 0.3s; }
+        
+        /* Logo ou Info Adicional */
+        #logo { position: absolute; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div id="status">A carregar cenário e veículo...</div>
+    <div id="logo">PROJETO: DETRAN-SP 3D</div>
+    <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
+    <div id="status">📡 Iniciando motores e carregando cidade...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
+        // --- CONFIGURAÇÃO DA CENA ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
+        scene.background = new THREE.Color(0x87CEEB); // Céu azul
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -24,57 +36,111 @@
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        // --- ILUMINAÇÃO ---
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
         sun.position.set(50, 100, 50);
         scene.add(sun);
 
+        // --- VARIÁVEIS DE JOGO ---
         const loader = new GLTFLoader();
         let car, city;
+        let keys = {};
+        let startTime = Date.now();
+        let podeAndar = true;
 
-        // 1. CARREGAR A CIDADE
+        // Lasers para Física (Raycasters)
+        const raycasterChao = new THREE.Raycaster();
+        const raycasterFrente = new THREE.Raycaster();
+
+        // --- CARREGAMENTO DOS MODELOS ---
+        
+        // 1. Carrega a Cidade Primeiro
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
-            console.log("Cidade carregada!");
-
-            // 2. CARREGAR A FERRARI (dentro da função da cidade)
+            
+            // 2. Depois carrega a Ferrari
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                car.scale.set(2, 2, 2); // Ajusta o tamanho do carro
                 
-                // Posição inicial (podes precisar ajustar estes números para não nascer num prédio)
-                car.position.set(0, 0.5, 0); 
+                // ESCALA AJUSTADA: 25 vezes maior para caber na rua
+                car.scale.set(25, 25, 25); 
+                
+                // POSIÇÃO INICIAL: Ponto estratégico da cidade
+                car.position.set(0, 1, 0); 
                 
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ TUDO PRONTO! Conduz com as setas.";
+                document.getElementById('status').innerText = "✅ SISTEMAS OK! USE AS SETAS PARA DIRIGIR.";
                 document.getElementById('status').style.backgroundColor = "green";
             });
         }, (xhr) => {
             const p = Math.round((xhr.loaded / xhr.total) * 100);
-            document.getElementById('status').innerText = "A carregar cidade: " + p + "%";
+            document.getElementById('status').innerText = "Carregando Cenário: " + p + "%";
         });
 
-        const keys = {};
+        // --- CONTROLES ---
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
+        // --- LOOP DE ANIMAÇÃO (O CORAÇÃO DO JOGO) ---
         function animate() {
             requestAnimationFrame(animate);
-            if (car) {
-                // Movimentação
-                if(keys['ArrowUp']) car.translateZ(0.6); 
-                if(keys['ArrowDown']) car.translateZ(-0.3);
-                if(keys['ArrowLeft']) car.rotation.y += 0.04;
-                if(keys['ArrowRight']) car.rotation.y -= 0.04;
 
-                // Câmara segue o carro (visão GTA)
-                const offset = new THREE.Vector3(0, 5, -15).applyMatrix4(car.matrixWorld);
+            if (car && city) {
+                // 1. FÍSICA DO CHÃO (Para não sumir no asfalto)
+                // Lança um laser de cima do carro para baixo
+                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 5, car.position.z);
+                raycasterChao.set(origemLaser, new THREE.Vector3(0, -1, 0));
+                
+                const intersecsChao = raycasterChao.intersectObject(city, true);
+                if (intersecsChao.length > 0) {
+                    // Ajusta a altura do carro conforme o relevo do asfalto
+                    car.position.y = intersecsChao[0].point.y + 0.1;
+                }
+
+                // 2. FÍSICA DE COLISÃO FRONTAL
+                const direcao = new THREE.Vector3();
+                car.getWorldDirection(direcao); // Vê para onde o bico do carro aponta
+                raycasterFrente.set(car.position, direcao);
+                
+                const obstaculos = raycasterFrente.intersectObject(city, true);
+                
+                // Se detectar algo a menos de 5 metros, para o carro
+                if (obstaculos.length > 0 && obstaculos[0].distance < 5) {
+                    podeAndar = false;
+                    document.getElementById('status').innerText = "⚠️ COLISÃO DETECTADA! DÊ RÉ.";
+                    document.getElementById('status').style.backgroundColor = "orange";
+                } else {
+                    podeAndar = true;
+                }
+
+                // 3. MOVIMENTAÇÃO
+                if (keys['ArrowUp'] && podeAndar) car.translateZ(0.8); // Acelerando
+                if (keys['ArrowDown']) car.translateZ(-0.4);            // Ré
+                if (keys['ArrowLeft']) car.rotation.y += 0.04;          // Esquerda
+                if (keys['ArrowRight']) car.rotation.y -= 0.04;         // Direita
+
+                // 4. CÂMERA (Visão GTA / Terceira Pessoa)
+                const offset = new THREE.Vector3(0, 12, -30).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
+
+            // 5. ATUALIZAR CRONÔMETRO
+            const tempoDecorrido = new Date(Date.now() - startTime);
+            document.getElementById('timerDisplay').innerText = tempoDecorrido.toISOString().substr(14, 8);
+
             renderer.render(scene, camera);
         }
+
+        // Redimensionar tela se o usuário girar o celular ou mudar janela
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
         animate();
     </script>
 </body>
