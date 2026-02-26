@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | CRISTAL EDITION</title>
+    <title>DETRAN-SP 3D | HAMBURGUERIA</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; z-index: 100; }
@@ -11,73 +11,60 @@
 </head>
 <body>
     <div id="timer">00:00.00</div>
-    <div id="status">💎 Ativando Reflexos de Cristal e Cores Reais...</div>
+    <div id="status">🍔 Instalando máquina de refri na hamburgueria...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
         const scene = new THREE.Scene();
-        // Um fundo cinza espacial para o reflexo não ser um breu total
         scene.background = new THREE.Color(0x1a1a1a); 
         scene.fog = new THREE.Fog(0x1a1a1a, 100, 1500);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        
-        // --- CONFIGURAÇÃO DE COR (Para a Ferrari não ser preta) ---
         renderer.outputEncoding = THREE.sRGBEncoding;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.5; // Brilho extra
         document.body.appendChild(renderer.domElement);
 
-        // ILUMINAÇÃO DE ESTÚDIO (Luz por todos os lados)
         scene.add(new THREE.AmbientLight(0xffffff, 1.8));
-        const light1 = new THREE.DirectionalLight(0xffffff, 1.0);
-        light1.position.set(10, 20, 10);
-        scene.add(light1);
-        const light2 = new THREE.DirectionalLight(0xffffff, 1.0);
-        light2.position.set(-10, 20, -10);
-        scene.add(light2);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(10, 50, 10);
+        scene.add(sun);
 
-        // --- O CHÃO DE ESPELHO REALISTA ---
+        // CHÃO DE CRISTAL
         const planeGeo = new THREE.PlaneGeometry(5000, 5000);
-        const planeMat = new THREE.MeshPhysicalMaterial({ 
-            color: 0x222222, 
-            metalness: 0.8, 
-            roughness: 0.1,
-            reflectivity: 1.0,
-            clearcoat: 1.0 // Efeito de verniz de carro no chão
-        });
+        const planeMat = new THREE.MeshPhysicalMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.1, clearcoat: 1.0 });
         const mirrorFloor = new THREE.Mesh(planeGeo, planeMat);
         mirrorFloor.rotation.x = -Math.PI / 2;
-        mirrorFloor.position.y = -0.02; // Bem rente à rua
+        mirrorFloor.position.y = -0.02;
         scene.add(mirrorFloor);
 
         const loader = new GLTFLoader();
         let car, city, startTime = Date.now();
         let keys = {};
 
+        // 1. CARREGAR CIDADE
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
             
+            // 2. CARREGAR MÁQUINA DE REFRI (Vending Machine)
+            loader.load('vending_machine.glb', (gltfMachine) => {
+                const machine = gltfMachine.scene;
+                // Ajustando tamanho e lugar (do lado da hamburgueria)
+                machine.scale.set(2, 2, 2); 
+                machine.position.set(15, 0, -10); // Ajuste esses números para mover a máquina
+                scene.add(machine);
+            });
+
+            // 3. CARREGAR FERRARI
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                
-                // Forçar brilho nos materiais da Ferrari
-                car.traverse(child => {
-                    if (child.isMesh) {
-                        child.material.envMapIntensity = 2;
-                        child.material.needsUpdate = true;
-                    }
-                });
-
                 car.scale.set(6, 6, 6); 
                 car.position.set(0, 0.15, 0); 
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ TUDO COLORIDO E ESPELHADO!";
+                document.getElementById('status').innerText = "✅ CIDADE, FERRARI E REFRI CARREGADOS!";
             });
         });
 
@@ -87,9 +74,8 @@
         function animate() {
             requestAnimationFrame(animate);
             if (car) {
-                const speed = 1.2;
-                if (keys['ArrowUp']) car.translateZ(speed);
-                if (keys['ArrowDown']) car.translateZ(-speed/2);
+                if (keys['ArrowUp']) car.translateZ(1.2);
+                if (keys['ArrowDown']) car.translateZ(-0.6);
                 if (keys['ArrowLeft']) car.rotation.y += 0.06;
                 if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
@@ -97,7 +83,6 @@
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
-
             // Timer
             const delta = Date.now() - startTime;
             const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
