@@ -2,17 +2,17 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | SIMULADOR ESCALA REAL</title>
+    <title>DETRAN-SP 3D | AJUSTE FINO</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; }
-        .timer { font-size: 30px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 8px 25px; border-radius: 10px; border: 2px solid #ed1c24; }
+        .timer { font-size: 28px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 8px 20px; border-radius: 8px; border: 2px solid #ed1c24; }
         #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-weight: bold; z-index: 100; }
     </style>
 </head>
 <body>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
-    <div id="status">🏎️ Ajustando escala para 18...</div>
+    <div id="status">🏎️ Aplicando escala 10...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
@@ -41,27 +41,22 @@
         const raycasterChao = new THREE.Raycaster();
         const raycasterFrente = new THREE.Raycaster();
 
-        // 1. CARREGAR CIDADE
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
             
-            // 2. CARREGAR FERRARI
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
                 
-                // MUDANÇA: Escala baixada para 18 para ajuste fino na rua
-                car.scale.set(18, 18, 18); 
+                // --- ESCALA 10: O AJUSTE QUE FALTAVA ---
+                car.scale.set(10, 10, 10); 
                 
-                car.position.set(0, 2, 0); 
+                car.position.set(0, 1, 0); 
                 scene.add(car);
                 
-                document.getElementById('status').innerText = "✅ PROPORÇÃO REVISADA! BOA SORTE NO EXAME.";
+                document.getElementById('status').innerText = "✅ ESCALA 10 APLICADA. AGORA ESTÁ REALISTA!";
                 document.getElementById('status').style.backgroundColor = "green";
             });
-        }, (xhr) => {
-            const p = Math.round((xhr.loaded / xhr.total) * 100);
-            document.getElementById('status').innerText = "Simulador Detran: " + p + "%";
         });
 
         window.addEventListener('keydown', e => keys[e.code] = true);
@@ -71,23 +66,22 @@
             requestAnimationFrame(animate);
 
             if (car && city) {
-                // SUSPENSÃO
-                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 5, car.position.z);
+                // SUSPENSÃO (Laser mais baixo para escala menor)
+                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 2, car.position.z);
                 raycasterChao.set(origemLaser, new THREE.Vector3(0, -1, 0));
                 
                 const intersecs = raycasterChao.intersectObject(city, true);
                 if (intersecs.length > 0) {
-                    car.position.y = intersecs[0].point.y + 0.05;
+                    car.position.y = intersecs[0].point.y + 0.02;
                 }
 
-                // COLISÃO
+                // COLISÃO FRONTAL (Ajustada para o bico do carro pequeno)
                 const direcao = new THREE.Vector3();
                 car.getWorldDirection(direcao);
                 raycasterFrente.set(car.position, direcao);
                 const obstaculos = raycasterFrente.intersectObject(city, true);
                 
-                // Distância de colisão reduzida para 3 (carro menor = para mais perto)
-                if (obstaculos.length > 0 && obstaculos[0].distance < 3) {
+                if (obstaculos.length > 0 && obstaculos[0].distance < 2) {
                     podeAndar = false;
                     document.getElementById('status').innerText = "⚠️ CUIDADO COM O MEIO-FIO!";
                     document.getElementById('status').style.backgroundColor = "orange";
@@ -95,15 +89,15 @@
                     podeAndar = true;
                 }
 
-                // MOVIMENTAÇÃO
-                if (keys['ArrowUp'] && podeAndar) car.translateZ(0.8); 
-                if (keys['ArrowDown']) car.translateZ(-0.4);
-                if (keys['ArrowLeft']) car.rotation.y += 0.04;
-                if (keys['ArrowRight']) car.rotation.y -= 0.04;
+                // MOVIMENTAÇÃO (Suave para o tamanho 10)
+                if (keys['ArrowUp'] && podeAndar) car.translateZ(0.6); 
+                if (keys['ArrowDown']) car.translateZ(-0.3);
+                if (keys['ArrowLeft']) car.rotation.y += 0.05;
+                if (keys['ArrowRight']) car.rotation.y -= 0.05;
 
-                // CÂMERA (Visão clássica de corrida)
-                // Y=8 (altura), Z=-20 (distância)
-                const offset = new THREE.Vector3(0, 8, -20).applyMatrix4(car.matrixWorld);
+                // CÂMERA (Visão baixa de esportivo)
+                // Y=5 (altura), Z=-12 (distância)
+                const offset = new THREE.Vector3(0, 5, -12).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
