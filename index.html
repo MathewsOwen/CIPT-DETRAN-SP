@@ -2,69 +2,82 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | MODO ESTÁVEL</title>
+    <title>DETRAN-SP 3D | VERSÃO FINAL ESTÁVEL</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; }
-        #timer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font: bold 24px sans-serif; color: white; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; }
-        #msg { position: fixed; bottom: 10px; width: 100%; text-align: center; color: yellow; font-family: sans-serif; font-weight: bold; }
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
+        #timer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 8px 20px; border-radius: 10px; border: 2px solid #ed1c24; }
+        #status { position: fixed; bottom: 10px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="timer">00:00.00</div>
-    <div id="msg">Aguarde... Carregando versão leve.</div>
+    <div id="status">🚀 Carregando motor...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        // Configuração ultra leve
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
-        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+        
+        // Câmera ajustada para não processar o que está muito longe (evita travar)
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+        const renderer = new THREE.WebGLRenderer({ antialias: false }); // Antialias off para mais FPS
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limita o esforço da placa de vídeo
         document.body.appendChild(renderer.domElement);
 
         scene.add(new THREE.AmbientLight(0xffffff, 1.5));
 
-        let car, city;
-        const keys = {};
         const loader = new GLTFLoader();
+        let car, city;
+        let keys = {};
 
-        // Carrega um de cada vez para não engasgar
+        // Carregamento sequencial para não travar a memória
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
-            
+            console.log("Cidade carregada");
+
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                car.scale.set(6, 6, 6);
-                car.position.set(0, 0.2, 0); // Altura fixa para não atravessar
+                car.scale.set(6, 6, 6); // Escala aprovada
+                car.position.set(0, 0.1, 0); // Altura estável
                 scene.add(car);
-                document.getElementById('msg').innerText = "✅ RODANDO EM MODO DE DESEMPENHO";
+                document.getElementById('status').innerText = "✅ RODANDO EM MODO DE DESEMPENHO";
+                document.getElementById('status').style.backgroundColor = "green";
             });
+        }, (xhr) => {
+            let p = Math.round((xhr.loaded / xhr.total) * 100);
+            document.getElementById('status').innerText = "Carregando Cidade: " + p + "%";
         });
 
         window.onkeydown = (e) => keys[e.code] = true;
         window.onkeyup = (e) => keys[e.code] = false;
 
-        function update() {
-            requestAnimationFrame(update);
+        function animate() {
+            requestAnimationFrame(animate);
             if (car) {
-                // Movimentação direta (consome menos CPU)
+                // Movimentação Turbo (1.2)
                 if (keys['ArrowUp']) car.translateZ(1.2);
                 if (keys['ArrowDown']) car.translateZ(-0.6);
-                if (keys['ArrowLeft']) car.rotation.y += 0.05;
-                if (keys['ArrowRight']) car.rotation.y -= 0.05;
+                if (keys['ArrowLeft']) car.rotation.y += 0.06;
+                if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-                // Câmera fixa (mais leve que a suave)
+                // Câmera direta (mais leve que o lerp)
                 const offset = new THREE.Vector3(0, 3, -10).applyMatrix4(car.matrixWorld);
                 camera.position.copy(offset);
                 camera.lookAt(car.position);
             }
             renderer.render(scene, camera);
         }
-        update();
+        animate();
+
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
     </script>
 </body>
 </html>
