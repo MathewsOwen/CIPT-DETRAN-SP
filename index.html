@@ -12,7 +12,7 @@
 </head>
 <body>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
-    <div id="status">⏳ Verificando arquivo no GitHub...</div>
+    <div id="status">📡 Tentando localizar 'carro.glb'...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
@@ -21,59 +21,57 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        camera.position.set(0, 5, 10);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(0, 5, 15);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputEncoding = THREE.sRGBEncoding; // Melhora as cores da Mercedes
+        renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        // ILUMINAÇÃO (Aumentada para o carro brilhar)
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+        scene.add(new THREE.AmbientLight(0xffffff, 2));
         const light = new THREE.DirectionalLight(0xffffff, 1.5);
         light.position.set(5, 10, 5);
         scene.add(light);
 
-        // CHÃO DE REFERÊNCIA
-        scene.add(new THREE.GridHelper(200, 40, 0xffffff, 0x555555));
+        // Grade de referência para você ver o chão
+        scene.add(new THREE.GridHelper(500, 50, 0xffffff, 0x555555));
 
         let car;
         const loader = new GLTFLoader();
 
-        // Tenta carregar o arquivo com o nome que você subiu ou 'carro.glb'
-        // DICA: Se você não renomeou, mude o nome abaixo para o nome gigante do arquivo
-        const nomeArquivo = 'carro.glb'; 
+        // ⚠️ IMPORTANTE: O nome abaixo deve ser IGUAL ao do arquivo no seu GitHub
+        const arquivo = '2016_mercedes-benz_gle63_amg_coupe (1).glb'; 
 
-        loader.load(nomeArquivo, (gltf) => {
+        loader.load(arquivo, (gltf) => {
             car = gltf.scene;
             
-            // --- CÁLCULO DE ENQUADRAMENTO AUTOMÁTICO ---
+            // --- BOX DE CENTRALIZAÇÃO ---
             const box = new THREE.Box3().setFromObject(car);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
 
-            // Centraliza o modelo no ponto (0,0,0) do jogo
-            car.position.x += (car.position.x - center.x);
-            car.position.y += (car.position.y - center.y) + (size.y / 2); // Toca o chão
-            car.position.z += (car.position.z - center.z);
+            // 1. Move o carro para o ponto zero absoluto
+            car.position.x = -center.x;
+            car.position.y = -center.y + (size.y / 2); // Toca o chão
+            car.position.z = -center.z;
 
-            // Ajusta a escala para o carro ter um tamanho bom (8 metros de comprimento)
+            // 2. Ajusta a escala (os dados mostram que ele é pequeno, vamos aumentar)
             const maxDim = Math.max(size.x, size.y, size.z);
-            const escalaNecessaria = 8 / maxDim;
-            car.scale.set(escalaNecessaria, escalaNecessaria, escalaNecessaria);
+            const escala = 10 / maxDim; // Força ele a ter 10 unidades de tamanho
+            car.scale.set(escala, escala, escala);
 
             scene.add(car);
             document.getElementById('status').style.backgroundColor = "green";
-            document.getElementById('status').innerText = "✅ MERCEDES CARREGADA! USE AS SETAS.";
+            document.getElementById('status').innerText = "✅ MERCEDES LOCALIZADA! USE AS SETAS.";
         }, 
         (xhr) => {
-            const porcento = Math.round((xhr.loaded / xhr.total) * 100);
-            document.getElementById('status').innerText = "Carregando Mercedes: " + porcento + "%";
+            const p = Math.round((xhr.loaded / xhr.total) * 100);
+            document.getElementById('status').innerText = "Baixando: " + p + "%";
         }, 
         (error) => {
             document.getElementById('status').style.backgroundColor = "red";
-            document.getElementById('status').innerHTML = "❌ ERRO: O arquivo '" + nomeArquivo + "' não foi achado no GitHub!";
+            document.getElementById('status').innerText = "❌ ERRO: Arquivo não encontrado. Verifique o nome!";
         });
 
         const keys = {};
@@ -84,14 +82,14 @@
         function animate() {
             requestAnimationFrame(animate);
             if (car) {
-                // Movimentação
-                if(keys['ArrowUp']) car.translateZ(0.3); 
-                if(keys['ArrowDown']) car.translateZ(-0.2);
-                if(keys['ArrowLeft']) car.rotation.y += 0.04;
-                if(keys['ArrowRight']) car.rotation.y -= 0.04;
+                // Movimento (usando os eixos que a Mercedes prefere)
+                if(keys['ArrowUp']) car.translateZ(0.5); 
+                if(keys['ArrowDown']) car.translateZ(-0.3);
+                if(keys['ArrowLeft']) car.rotation.y += 0.05;
+                if(keys['ArrowRight']) car.rotation.y -= 0.05;
 
-                // Câmera segue o carro suavemente
-                const offset = new THREE.Vector3(0, 5, -12).applyMatrix4(car.matrixWorld);
+                // Câmera segue o carro
+                const offset = new THREE.Vector3(0, 8, -20).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
