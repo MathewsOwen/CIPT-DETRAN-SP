@@ -2,49 +2,52 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | INFINITE MIRROR EDITION</title>
+    <title>DETRAN-SP 3D | ULTRA GRAPHICS</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.85); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; z-index: 100; }
+        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.85); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; z-index: 100; box-shadow: 0 0 20px rgba(237, 28, 36, 0.3); }
         #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; z-index: 100; }
     </style>
 </head>
 <body>
     <div id="timer">00:00.00</div>
-    <div id="status">✨ Criando reflexos infinitos...</div>
+    <div id="status">💎 Renderizando Reflexos em Tempo Real...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
+        import { Reflector } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/objects/Reflector.js';
 
         const scene = new THREE.Scene();
-        // Fundo um pouco mais escuro para o reflexo brilhar
-        scene.background = new THREE.Color(0x111111); 
-        scene.fog = new THREE.Fog(0x111111, 500, 3000); // Neblina para o horizonte sumir suavemente
+        // Um céu de fim de tarde para combinar com o espelho
+        scene.background = new THREE.Color(0x020205); 
+        scene.fog = new THREE.Fog(0x020205, 100, 1500);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // ILUMINAÇÃO
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-        sun.position.set(50, 100, 50);
-        scene.add(sun);
+        // LUZES DE ALTA QUALIDADE
+        scene.add(new THREE.AmbientLight(0xffffff, 1.8));
+        const spot = new THREE.SpotLight(0xffffff, 2);
+        spot.position.set(100, 1000, 100);
+        scene.add(spot);
 
-        // --- EFEITO ESPELHO (CHÃO REFLETOR) ---
+        // --- O ESPELHO REAL (REFLECTOR) ---
+        const mirrorOptions = {
+            clipBias: 0.003,
+            textureWidth: window.innerWidth * window.devicePixelRatio,
+            textureHeight: window.innerHeight * window.devicePixelRatio,
+            color: 0x777777
+        };
         const mirrorGeo = new THREE.PlaneGeometry(10000, 10000);
-        const mirrorMat = new THREE.MeshStandardMaterial({ 
-            color: 0x222222, 
-            metalness: 0.9, 
-            roughness: 0.1 // Quanto menor, mais parece espelho
-        });
-        const mirror = new THREE.Mesh(mirrorGeo, mirrorMat);
-        mirror.rotation.x = -Math.PI / 2;
-        mirror.position.y = -0.05; // Levemente abaixo do nível da rua
-        scene.add(mirror);
+        const groundMirror = new Reflector(mirrorGeo, mirrorOptions);
+        groundMirror.rotateX(-Math.PI / 2);
+        groundMirror.position.y = -0.1; // Logo abaixo da roda
+        scene.add(groundMirror);
 
         const loader = new GLTFLoader();
         let car, city, startTime = Date.now();
@@ -59,7 +62,7 @@
                 car.scale.set(6, 6, 6); 
                 car.position.set(0, 0.15, 0); 
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ EFEITO ESPELHO ATIVADO!";
+                document.getElementById('status').innerText = "✅ MODO ULTRA ATIVADO - REFLEXOS 100%";
             });
         });
 
@@ -75,7 +78,7 @@
                 if (keys['ArrowLeft']) car.rotation.y += 0.06;
                 if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-                const offset = new THREE.Vector3(0, 3.5, -11).applyMatrix4(car.matrixWorld);
+                const offset = new THREE.Vector3(0, 4, -12).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
