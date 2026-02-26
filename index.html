@@ -11,14 +11,14 @@
     </style>
 </head>
 <body>
-    <div id="loading">🚀 Carregando Mercedes AMG...<br><small>Certifique-se que o arquivo chama-se "carro.glb"</small></div>
+    <div id="loading">🚀 Carregando Mercedes AMG...<br><small>Certifique-se que o arquivo no GitHub chama-se "carro.glb"</small></div>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        // 1. CENA E AMBIENTE
+        // 1. CONFIGURAÇÃO DA CENA
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
 
@@ -28,48 +28,49 @@
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // 2. ILUMINAÇÃO
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        // 2. LUZES (Aumentadas para o modelo não ficar escuro)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 2); 
+        scene.add(ambientLight);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
         sun.position.set(10, 20, 10);
         scene.add(sun);
 
-        // 3. PISTA E CENÁRIO
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 2000), new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.8}));
+        // 3. CHÃO
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 2000), new THREE.MeshStandardMaterial({color: 0x1a1a1a}));
         road.rotation.x = -Math.PI / 2;
         scene.add(road);
 
-        // 4. CARREGANDO A MERCEDES (COM CORREÇÃO DE POSIÇÃO)
+        // 4. CARREGAMENTO DO MODELO COM CORREÇÃO DE CAIXA ENVOLVENTE
         let car;
         const loader = new GLTFLoader();
 
         loader.load('carro.glb', (gltf) => {
             car = gltf.scene;
             
-            // --- INÍCIO DA CORREÇÃO DE DIAGNÓSTICO ---
+            // Força o cálculo do tamanho real do modelo
             const box = new THREE.Box3().setFromObject(car);
+            const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
-            car.position.sub(center); // Centraliza os eixos do modelo
+
+            // Reposiciona o modelo para o centro interno dele
+            car.position.x += (car.position.x - center.x);
+            car.position.y += (car.position.y - center.y) + (size.y / 2);
+            car.position.z += (car.position.z - center.z);
             
-            car.position.y = 0.5;      // Garante que o pneu toque o asfalto
-            car.scale.set(3, 3, 3);    // Aumentei para 3 para garantir que seja visível
-            // --- FIM DA CORREÇÃO ---
+            // Ajuste de escala: Se o carro for gigante, diminua para 1. Se sumir, aumente para 5.
+            car.scale.set(2, 2, 2); 
             
             scene.add(car);
             document.getElementById('loading').style.display = 'none';
-            console.log("Sucesso! Carro na cena.");
+            console.log("Mercedes carregada com sucesso!");
         }, 
-        (xhr) => {
-            if (xhr.lengthComputable) {
-                console.log((xhr.loaded / xhr.total * 100) + '% carregado');
-            }
-        },
+        undefined,
         (error) => { 
-            console.error("Erro ao carregar:", error);
-            document.getElementById('loading').innerHTML = "❌ Erro: O arquivo 'carro.glb' não foi encontrado ou está corrompido!";
+            console.error(error);
+            document.getElementById('loading').innerHTML = "❌ Erro: Arquivo 'carro.glb' não encontrado no repositório.";
         });
 
-        // 5. CONES DE OBSTÁCULO
+        // 5. CONES
         const cones = [];
         function createCone(x, z) {
             const c = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.2, 16), new THREE.MeshPhongMaterial({color: 0xff4500}));
@@ -79,7 +80,7 @@
         }
         for(let z = -100; z <= 20; z += 20) { createCone(-5, z); createCone(5, z); }
 
-        // 6. CONTROLES E ANIMAÇÃO
+        // 6. MOVIMENTAÇÃO
         const keys = {};
         let startTime, running = false;
         window.addEventListener('keydown', e => { 
@@ -91,23 +92,21 @@
         function animate() {
             requestAnimationFrame(animate);
             if (car) {
-                // Movimentação básica
+                // Movimento
                 if(keys['ArrowUp']) car.translateZ(0.4); 
                 if(keys['ArrowDown']) car.translateZ(-0.2);
                 if(keys['ArrowLeft']) car.rotation.y += 0.05;
                 if(keys['ArrowRight']) car.rotation.y -= 0.05;
 
-                // Câmera dinâmica seguindo o modelo centralizado
-                const offset = new THREE.Vector3(0, 5, -15).applyMatrix4(car.matrixWorld);
+                // Câmera dinâmica
+                const offset = new THREE.Vector3(0, 5, -12).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
 
-                // Colisões com os cones
+                // Colisões
                 cones.forEach(c => {
                     if (car.position.distanceTo(c.mesh.position) < 3.5 && !c.hit) {
-                        c.hit = true; 
-                        c.mesh.rotation.z = 1.5; 
-                        c.mesh.position.y = 0.2;
+                        c.hit = true; c.mesh.rotation.z = 1.5;
                     }
                 });
             }
@@ -120,7 +119,6 @@
         }
         animate();
 
-        // AJUSTE DE JANELA
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
