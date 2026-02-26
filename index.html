@@ -2,109 +2,95 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | ESCALA 6 - ALTA PERFORMANCE</title>
+    <title>DETRAN-SP 3D | VERSÃO ULTRA ESTÁVEL</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
-        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; }
-        .timer { font-size: 26px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 8px 20px; border-radius: 8px; border: 2px solid #ed1c24; box-shadow: 0 0 10px rgba(237, 28, 36, 0.4); }
-        #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-weight: bold; z-index: 100; }
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
+        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10; }
+        .timer { font-size: 26px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 8px 20px; border-radius: 8px; border: 2px solid #ed1c24; }
+        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.9); padding: 10px; font-weight: bold; z-index: 100; }
     </style>
 </head>
 <body>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
-    <div id="status">🏎️ Configurando Escala 6 e Motor Turbo...</div>
+    <div id="status">🚀 Iniciando Motor Turbo (Escala 6)...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
+        // --- CENA BÁSICA ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 30000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(100, 300, 100);
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+        sun.position.set(10, 50, 10);
         scene.add(sun);
 
         const loader = new GLTFLoader();
         let car, city;
         let keys = {};
-        let startTime = Date.now();
-        let podeAndar = true;
+        const raycaster = new THREE.Raycaster();
 
-        const raycasterChao = new THREE.Raycaster();
-        const raycasterFrente = new THREE.Raycaster();
-
+        // --- CARREGAMENTO ---
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
             
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                
-                // --- ESCALA 6: AJUSTE SOLICITADO ---
-                car.scale.set(6, 6, 6); 
-                
-                car.position.set(0, 1, 0); 
+                car.scale.set(6, 6, 6); // Escala pedida
+                car.position.set(0, 0.5, 0); 
                 scene.add(car);
-                
-                document.getElementById('status').innerText = "✅ ESCALA 6 E VELOCIDADE AUMENTADA!";
-                document.getElementById('status').style.backgroundColor = "green";
+                document.getElementById('status').innerText = "✅ MOTOR LIGADO! ACELERE!";
             });
         });
 
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-      // No seu loop de animação
-function animate() {
-    requestAnimationFrame(animate);
+        function animate() {
+            requestAnimationFrame(animate);
 
-    if (car && city) {
-        // --- SISTEMA ANTIAFOGAMENTO (Raycast) ---
-        // Criamos um laser que sai de dentro do carro e aponta para o chão
-        const raycaster = new THREE.Raycaster();
-        const posicaoLaser = new THREE.Vector3(car.position.x, car.position.y + 5, car.position.z);
-        raycaster.set(posicaoLaser, new THREE.Vector3(0, -1, 0));
+            if (car && city) {
+                // --- FIXAÇÃO NO CHÃO (Evita o carro sumir na rua) ---
+                const down = new THREE.Vector3(0, -1, 0);
+                raycaster.set(new THREE.Vector3(car.position.x, car.position.y + 2, car.position.z), down);
+                const hit = raycaster.intersectObject(city, true);
+                if (hit.length > 0) {
+                    car.position.y = hit[0].point.y + 0.05; // Mantém 0.05 acima do asfalto
+                }
 
-        // Checamos se o laser atingiu a cidade
-        const interseccoes = raycaster.intersectObject(city, true);
+                // --- MOVIMENTAÇÃO TURBO ---
+                const speed = 1.0; // Velocidade aumentada
+                const rotationSpeed = 0.06;
 
-        if (interseccoes.length > 0) {
-            // O ponto exato do asfalto é interseccoes[0].point.y
-            // Forçamos o carro a ficar um pouquinho acima desse ponto
-            car.position.y = interseccoes[0].point.y + 0.1;
+                if (keys['ArrowUp']) car.translateZ(speed);
+                if (keys['ArrowDown']) car.translateZ(-speed/2);
+                if (keys['ArrowLeft']) car.rotation.y += rotationSpeed;
+                if (keys['ArrowRight']) car.rotation.y -= rotationSpeed;
+
+                // --- CÂMERA SUAVE ---
+                const offset = new THREE.Vector3(0, 3, -10).applyMatrix4(car.matrixWorld);
+                camera.position.lerp(offset, 0.1);
+                camera.lookAt(car.position);
+            }
+
+            renderer.render(scene, camera);
         }
+        animate();
 
-        // --- MOVIMENTAÇÃO (Já ajustada para a escala 6) ---
-        if (keys['ArrowUp'] && podeAndar) car.translateZ(1.0);
-        if (keys['ArrowDown']) car.translateZ(-0.5);
-        if (keys['ArrowLeft']) car.rotation.y += 0.06;
-        if (keys['ArrowRight']) car.rotation.y -= 0.06;
-
-        // Atualiza a câmera para seguir o carro na nova altura
-        const offset = new THREE.Vector3(0, 3, -10).applyMatrix4(car.matrixWorld);
-        camera.position.lerp(offset, 0.1);
-        camera.lookAt(car.position);
-    }
-
-    renderer.render(scene, camera);
-}
-        }
-
+        // Ajuste de tela
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        animate();
     </script>
 </body>
 </html>
