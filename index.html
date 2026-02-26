@@ -2,49 +2,57 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | ESPELHO INFINITO</title>
+    <title>DETRAN-SP 3D | CRISTAL EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.85); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; z-index: 100; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; z-index: 100; }
         #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; z-index: 100; }
     </style>
 </head>
 <body>
     <div id="timer">00:00.00</div>
-    <div id="status">💎 Ativando Reflexo de Cristal (Escala 6)...</div>
+    <div id="status">💎 Ativando Reflexos de Cristal e Cores Reais...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
         const scene = new THREE.Scene();
-        // Fundo cinza escuro de luxo para destacar o carro
-        scene.background = new THREE.Color(0x0a0a0a); 
-        scene.fog = new THREE.Fog(0x0a0a0a, 200, 2000);
+        // Um fundo cinza espacial para o reflexo não ser um breu total
+        scene.background = new THREE.Color(0x1a1a1a); 
+        scene.fog = new THREE.Fog(0x1a1a1a, 100, 1500);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        // --- CONFIGURAÇÃO DE COR (Para a Ferrari não ser preta) ---
         renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.5; // Brilho extra
         document.body.appendChild(renderer.domElement);
 
-        // LUZES FORTES (Para o carro não ficar preto nunca mais!)
-        const light = new THREE.AmbientLight(0xffffff, 2.0);
-        scene.add(light);
-        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-        sun.position.set(50, 100, 50);
-        scene.add(sun);
+        // ILUMINAÇÃO DE ESTÚDIO (Luz por todos os lados)
+        scene.add(new THREE.AmbientLight(0xffffff, 1.8));
+        const light1 = new THREE.DirectionalLight(0xffffff, 1.0);
+        light1.position.set(10, 20, 10);
+        scene.add(light1);
+        const light2 = new THREE.DirectionalLight(0xffffff, 1.0);
+        light2.position.set(-10, 20, -10);
+        scene.add(light2);
 
-        // --- O CHÃO DE ESPELHO (VERSÃO ESTÁVEL) ---
-        const planeGeo = new THREE.PlaneGeometry(10000, 10000);
-        const planeMat = new THREE.MeshStandardMaterial({ 
-            color: 0x111111, 
-            metalness: 1.0,  // Totalmente metálico
-            roughness: 0.1,  // Quase zero rugosidade (brilho máximo)
+        // --- O CHÃO DE ESPELHO REALISTA ---
+        const planeGeo = new THREE.PlaneGeometry(5000, 5000);
+        const planeMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0x222222, 
+            metalness: 0.8, 
+            roughness: 0.1,
+            reflectivity: 1.0,
+            clearcoat: 1.0 // Efeito de verniz de carro no chão
         });
         const mirrorFloor = new THREE.Mesh(planeGeo, planeMat);
         mirrorFloor.rotation.x = -Math.PI / 2;
-        mirrorFloor.position.y = -0.05; 
+        mirrorFloor.position.y = -0.02; // Bem rente à rua
         scene.add(mirrorFloor);
 
         const loader = new GLTFLoader();
@@ -58,13 +66,18 @@
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
                 
-                // Garante que o material da Ferrari aceite as luzes
-                car.traverse(n => { if(n.isMesh) n.castShadow = true; });
+                // Forçar brilho nos materiais da Ferrari
+                car.traverse(child => {
+                    if (child.isMesh) {
+                        child.material.envMapIntensity = 2;
+                        child.material.needsUpdate = true;
+                    }
+                });
 
                 car.scale.set(6, 6, 6); 
                 car.position.set(0, 0.15, 0); 
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ EFEITO ESPELHO OK! SEM TRAVAMENTOS.";
+                document.getElementById('status').innerText = "✅ TUDO COLORIDO E ESPELHADO!";
             });
         });
 
@@ -85,7 +98,7 @@
                 camera.lookAt(car.position);
             }
 
-            // Relógio Detran
+            // Timer
             const delta = Date.now() - startTime;
             const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
             const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
