@@ -2,128 +2,88 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN 3D - MERCEDES AMG</title>
+    <title>DETRAN 3D - FOCO TOTAL</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
-        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; z-index: 10; }
-        .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; display: inline-block; border: 2px solid #00ff44; }
-        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.9); padding: 30px; border-radius: 15px; z-index: 100; text-align: center; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; }
+        .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; border: 2px solid #00ff44; }
+        #msg { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; font-size: 18px; }
     </style>
 </head>
 <body>
-    <div id="loading">🚀 Carregando Mercedes AMG...<br><small>Certifique-se que o arquivo no GitHub chama-se "carro.glb"</small></div>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
+    <div id="msg">Aguardando carregamento da Mercedes (carro.glb)...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        // 1. CONFIGURAÇÃO DA CENA
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // Câmera começa em uma posição padrão de segurança
+        camera.position.set(0, 5, 15);
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // 2. LUZES (Aumentadas para o modelo não ficar escuro)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 2); 
-        scene.add(ambientLight);
-        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-        sun.position.set(10, 20, 10);
+        scene.add(new THREE.AmbientLight(0xffffff, 2));
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(5, 10, 7);
         scene.add(sun);
 
-        // 3. CHÃO
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 2000), new THREE.MeshStandardMaterial({color: 0x1a1a1a}));
-        road.rotation.x = -Math.PI / 2;
-        scene.add(road);
+        // Chão para referência
+        const grid = new THREE.GridHelper(200, 50, 0xffffff, 0x444444);
+        scene.add(grid);
 
-        // 4. CARREGAMENTO DO MODELO COM CORREÇÃO DE CAIXA ENVOLVENTE
         let car;
         const loader = new GLTFLoader();
 
         loader.load('carro.glb', (gltf) => {
             car = gltf.scene;
             
-            // Força o cálculo do tamanho real do modelo
-            const box = new THREE.Box3().setFromObject(car);
-            const size = box.getSize(new THREE.Vector3());
-            const center = box.getCenter(new THREE.Vector3());
-
-            // Reposiciona o modelo para o centro interno dele
-            car.position.x += (car.position.x - center.x);
-            car.position.y += (car.position.y - center.y) + (size.y / 2);
-            car.position.z += (car.position.z - center.z);
-            
-            // Ajuste de escala: Se o carro for gigante, diminua para 1. Se sumir, aumente para 5.
-            car.scale.set(2, 2, 2); 
+            // RESET DE ESCALA E POSIÇÃO
+            car.scale.set(1, 1, 1); 
+            car.position.set(0, 0, 0);
             
             scene.add(car);
-            document.getElementById('loading').style.display = 'none';
-            console.log("Mercedes carregada com sucesso!");
-        }, 
-        undefined,
-        (error) => { 
-            console.error(error);
-            document.getElementById('loading').innerHTML = "❌ Erro: Arquivo 'carro.glb' não encontrado no repositório.";
+            document.getElementById('msg').innerText = "MERCEDES DETECTADA! Use as setas.";
+            console.log("Modelo carregado.");
+        }, undefined, (error) => {
+            document.getElementById('msg').innerText = "ERRO: O arquivo 'carro.glb' não foi encontrado.";
         });
 
-        // 5. CONES
-        const cones = [];
-        function createCone(x, z) {
-            const c = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.2, 16), new THREE.MeshPhongMaterial({color: 0xff4500}));
-            c.position.set(x, 0.6, z);
-            scene.add(c);
-            cones.push({ mesh: c, hit: false });
-        }
-        for(let z = -100; z <= 20; z += 20) { createCone(-5, z); createCone(5, z); }
-
-        // 6. MOVIMENTAÇÃO
+        // CRONÔMETRO E MOVIMENTO
         const keys = {};
-        let startTime, running = false;
-        window.addEventListener('keydown', e => { 
-            keys[e.code] = true; 
-            if(!running && e.code.includes('Arrow')) { running = true; startTime = Date.now(); }
-        });
+        let startTime = Date.now();
+        window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
         function animate() {
             requestAnimationFrame(animate);
+            
             if (car) {
-                // Movimento
-                if(keys['ArrowUp']) car.translateZ(0.4); 
+                // Tenta mover o carro - se ele estiver de lado, vamos descobrir agora
+                if(keys['ArrowUp']) car.translateZ(0.2); 
                 if(keys['ArrowDown']) car.translateZ(-0.2);
-                if(keys['ArrowLeft']) car.rotation.y += 0.05;
-                if(keys['ArrowRight']) car.rotation.y -= 0.05;
+                if(keys['ArrowLeft']) car.rotation.y += 0.03;
+                if(keys['ArrowRight']) car.rotation.y -= 0.03;
 
-                // Câmera dinâmica
-                const offset = new THREE.Vector3(0, 5, -12).applyMatrix4(car.matrixWorld);
-                camera.position.lerp(offset, 0.1);
+                // Câmera colada no carro
+                const camOffset = new THREE.Vector3(0, 4, -10).applyMatrix4(car.matrixWorld);
+                camera.position.lerp(camOffset, 0.1);
                 camera.lookAt(car.position);
-
-                // Colisões
-                cones.forEach(c => {
-                    if (car.position.distanceTo(c.mesh.position) < 3.5 && !c.hit) {
-                        c.hit = true; c.mesh.rotation.z = 1.5;
-                    }
-                });
             }
 
-            if(running) {
-                const d = new Date(Date.now() - startTime);
-                document.getElementById('timerDisplay').innerText = d.toISOString().substr(14, 8);
-            }
+            // Cronômetro rodando sempre para confirmar que o script está ativo
+            const d = new Date(Date.now() - startTime);
+            document.getElementById('timerDisplay').innerText = d.toISOString().substr(14, 8);
+            
             renderer.render(scene, camera);
         }
         animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
