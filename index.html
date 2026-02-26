@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN 3D - MERCEDES AMG EDITION</title>
+    <title>DETRAN 3D - MERCEDES AMG</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
-        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
+        #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; z-index: 10; }
         .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; display: inline-block; border: 2px solid #00ff44; }
-        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.9); padding: 20px; border-radius: 10px; z-index: 100; }
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.9); padding: 30px; border-radius: 15px; z-index: 100; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="loading">Carregando Mercedes AMG...</div>
+    <div id="loading">🚀 Carregando Mercedes AMG...<br><small>Certifique-se que o arquivo chama-se "carro.glb"</small></div>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
 
     <script type="module">
@@ -20,7 +20,6 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 20, 150);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -28,48 +27,47 @@
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // ILUMINAÇÃO
-        scene.add(new THREE.AmbientLight(0xffffff, 1));
-        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+        // ILUMINAÇÃO POTENTE
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
         sun.position.set(10, 20, 10);
-        sun.castShadow = true;
         scene.add(sun);
 
-        // PISTA E GRAMA
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 2000), new THREE.MeshPhongMaterial({color: 0x1a1a1a}));
-        road.rotation.x = -Math.PI / 2; road.receiveShadow = true; scene.add(road);
-        
-        const grass = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshPhongMaterial({color: 0x2d4c1e}));
-        grass.rotation.x = -Math.PI / 2; grass.position.y = -0.05; scene.add(grass);
+        // PISTA
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 2000), new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.8}));
+        road.rotation.x = -Math.PI / 2;
+        scene.add(road);
 
-        // CARREGANDO A MERCEDES
+        // CARREGANDO O MODELO
         let car;
         const loader = new GLTFLoader();
-        // Nome exato do seu arquivo subido
-        const fileName = '2016_mercedes-benz_gle63_amg_coupe (1).glb'; 
 
-        loader.load(fileName, (gltf) => {
+        loader.load('carro.glb', (gltf) => {
             car = gltf.scene;
             
-            // Ajustando o tamanho e posição
-            car.scale.set(1.5, 1.5, 1.5); 
-            car.position.y = 0.2; // Para não ficar enterrada no asfalto
+            // Ajustes de Escala e Posição (Pode variar conforme o modelo)
+            car.scale.set(2, 2, 2); 
+            car.position.y = 0; 
             
             scene.add(car);
             document.getElementById('loading').style.display = 'none';
-        }, undefined, (error) => {
-            console.error("Erro ao carregar:", error);
-            document.getElementById('loading').innerText = "Erro ao carregar o arquivo .glb";
+            console.log("Carro carregado!");
+        }, 
+        (xhr) => { console.log((xhr.loaded / xhr.total * 100) + '% carregado'); },
+        (error) => { 
+            console.error("Erro ao carregar o arquivo:", error);
+            document.getElementById('loading').innerHTML = "❌ Erro: Arquivo 'carro.glb' não encontrado!";
         });
 
         // CONES
         const cones = [];
         function createCone(x, z) {
             const c = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.2, 16), new THREE.MeshPhongMaterial({color: 0xff4500}));
-            c.position.set(x, 0.6, z); scene.add(c);
+            c.position.set(x, 0.6, z);
+            scene.add(c);
             cones.push({ mesh: c, hit: false });
         }
-        [-5, 5].forEach(x => { for(let z=-100; z<=20; z+=20) createCone(x, z); });
+        for(let z = -100; z <= 20; z += 20) { createCone(-5, z); createCone(5, z); }
 
         // CONTROLES
         const keys = {};
@@ -83,21 +81,20 @@
         function animate() {
             requestAnimationFrame(animate);
             if (car) {
-                // Movimentação (ajustada para a direção do modelo GLB)
-                if(keys['ArrowUp']) car.translateZ(0.3); 
-                if(keys['ArrowDown']) car.translateZ(-0.15);
-                if(keys['ArrowLeft']) car.rotation.y += 0.04;
-                if(keys['ArrowRight']) car.rotation.y -= 0.04;
+                // Se o carro andar de lado, troque translateZ por translateX
+                if(keys['ArrowUp']) car.translateZ(0.4); 
+                if(keys['ArrowDown']) car.translateZ(-0.2);
+                if(keys['ArrowLeft']) car.rotation.y += 0.05;
+                if(keys['ArrowRight']) car.rotation.y -= 0.05;
 
-                // Câmera segue o carro
-                const offset = new THREE.Vector3(0, 6, -15).applyMatrix4(car.matrixWorld);
+                // Câmera Dinâmica
+                const offset = new THREE.Vector3(0, 5, -12).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
 
-                // Colisão com cones
+                // Colisões
                 cones.forEach(c => {
-                    const dist = car.position.distanceTo(c.mesh.position);
-                    if (dist < 2.8 && !c.hit) {
+                    if (car.position.distanceTo(c.mesh.position) < 3 && !c.hit) {
                         c.hit = true; c.mesh.rotation.z = 1.5;
                     }
                 });
@@ -110,6 +107,12 @@
             renderer.render(scene, camera);
         }
         animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
