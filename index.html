@@ -2,139 +2,139 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | SIMULADOR</title>
+    <title>DETRAN-SP 3D | SIMULADOR PROFISSIONAL</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
         
-        /* Interface Superior (Cronômetro) */
+        /* Cronómetro */
         #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; }
         .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; border: 2px solid #ed1c24; box-shadow: 0 0 15px rgba(237, 28, 36, 0.5); }
         
-        /* Barra de Status Inferior */
-        #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-weight: bold; z-index: 100; transition: all 0.3s; }
+        /* Status Inferior */
+        #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-weight: bold; z-index: 100; }
         
-        /* Logo ou Info Adicional */
-        #logo { position: absolute; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; font-size: 14px; }
+        #logo { position: absolute; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div id="logo">PROJETO: DETRAN-SP 3D</div>
+    <div id="logo">DETRAN-SP: TESTE DE DIREÇÃO</div>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
-    <div id="status">📡 Iniciando motores e carregando cidade...</div>
+    <div id="status">🚀 A preparar simulador...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        // --- CONFIGURAÇÃO DA CENA ---
+        // --- CENA ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Céu azul
+        scene.background = new THREE.Color(0x87CEEB);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        // --- ILUMINAÇÃO ---
-        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-        sun.position.set(50, 100, 50);
+        // --- LUZES ---
+        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(100, 200, 100);
         scene.add(sun);
 
-        // --- VARIÁVEIS DE JOGO ---
+        // --- VARIÁVEIS ---
         const loader = new GLTFLoader();
         let car, city;
         let keys = {};
         let startTime = Date.now();
         let podeAndar = true;
 
-        // Lasers para Física (Raycasters)
         const raycasterChao = new THREE.Raycaster();
         const raycasterFrente = new THREE.Raycaster();
 
-        // --- CARREGAMENTO DOS MODELOS ---
+        // --- CARREGAR MODELOS ---
         
-        // 1. Carrega a Cidade Primeiro
+        // 1. Carrega a Cidade
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
             
-            // 2. Depois carrega a Ferrari
+            // 2. Carrega a Ferrari Roma
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
                 
-                // ESCALA AJUSTADA: 25 vezes maior para caber na rua
-                car.scale.set(25, 25, 25); 
+                // ESCALA REVISADA: 130 para ficar proporcional ao caminhão e prédios
+                car.scale.set(130, 130, 130); 
                 
-                // POSIÇÃO INICIAL: Ponto estratégico da cidade
-                car.position.set(0, 1, 0); 
+                // Posição no asfalto
+                car.position.set(0, 2, 0); 
                 
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ SISTEMAS OK! USE AS SETAS PARA DIRIGIR.";
+                document.getElementById('status').innerText = "✅ TUDO PRONTO! CONDUZA COM AS SETAS.";
                 document.getElementById('status').style.backgroundColor = "green";
             });
         }, (xhr) => {
             const p = Math.round((xhr.loaded / xhr.total) * 100);
-            document.getElementById('status').innerText = "Carregando Cenário: " + p + "%";
+            document.getElementById('status').innerText = "A carregar cidade: " + p + "%";
         });
 
         // --- CONTROLES ---
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // --- LOOP DE ANIMAÇÃO (O CORAÇÃO DO JOGO) ---
+        // --- LOOP DE ANIMAÇÃO ---
         function animate() {
             requestAnimationFrame(animate);
 
             if (car && city) {
-                // 1. FÍSICA DO CHÃO (Para não sumir no asfalto)
-                // Lança um laser de cima do carro para baixo
-                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 5, car.position.z);
+                // 1. SUSPENSÃO (Evita que o asfalto cubra o carro)
+                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 20, car.position.z);
                 raycasterChao.set(origemLaser, new THREE.Vector3(0, -1, 0));
                 
-                const intersecsChao = raycasterChao.intersectObject(city, true);
-                if (intersecsChao.length > 0) {
-                    // Ajusta a altura do carro conforme o relevo do asfalto
-                    car.position.y = intersecsChao[0].point.y + 0.1;
+                const intersecs = raycasterChao.intersectObject(city, true);
+                if (intersecs.length > 0) {
+                    car.position.y = intersecs[0].point.y + 0.2;
                 }
 
-                // 2. FÍSICA DE COLISÃO FRONTAL
+                // 2. COLISÃO (Raio laser para frente)
                 const direcao = new THREE.Vector3();
-                car.getWorldDirection(direcao); // Vê para onde o bico do carro aponta
+                car.getWorldDirection(direcao);
                 raycasterFrente.set(car.position, direcao);
                 
                 const obstaculos = raycasterFrente.intersectObject(city, true);
                 
-                // Se detectar algo a menos de 5 metros, para o carro
-                if (obstaculos.length > 0 && obstaculos[0].distance < 5) {
+                // Se detectar algo a menos de 10 metros (devido à escala maior)
+                if (obstaculos.length > 0 && obstaculos[0].distance < 10) {
                     podeAndar = false;
-                    document.getElementById('status').innerText = "⚠️ COLISÃO DETECTADA! DÊ RÉ.";
+                    document.getElementById('status').innerText = "⚠️ COLISÃO! USE A RÉ.";
                     document.getElementById('status').style.backgroundColor = "orange";
                 } else {
                     podeAndar = true;
+                    if(document.getElementById('status').style.backgroundColor === "orange") {
+                        document.getElementById('status').innerText = "✅ PISTA LIVRE";
+                        document.getElementById('status').style.backgroundColor = "green";
+                    }
                 }
 
-                // 3. MOVIMENTAÇÃO
-                if (keys['ArrowUp'] && podeAndar) car.translateZ(0.8); // Acelerando
-                if (keys['ArrowDown']) car.translateZ(-0.4);            // Ré
-                if (keys['ArrowLeft']) car.rotation.y += 0.04;          // Esquerda
-                if (keys['ArrowRight']) car.rotation.y -= 0.04;         // Direita
+                // 3. MOVIMENTAÇÃO (Ajustada para o novo tamanho)
+                if (keys['ArrowUp'] && podeAndar) car.translateZ(2.5); // Mais rápido por ser maior
+                if (keys['ArrowDown']) car.translateZ(-1.2);
+                if (keys['ArrowLeft']) car.rotation.y += 0.04;
+                if (keys['ArrowRight']) car.rotation.y -= 0.04;
 
-                // 4. CÂMERA (Visão GTA / Terceira Pessoa)
-                const offset = new THREE.Vector3(0, 12, -30).applyMatrix4(car.matrixWorld);
+                // 4. CÂMERA (Afastada para o novo tamanho do carro)
+                // Y=40 (altura) e Z=-100 (distância atrás do carro)
+                const offset = new THREE.Vector3(0, 40, -100).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
 
-            // 5. ATUALIZAR CRONÔMETRO
-            const tempoDecorrido = new Date(Date.now() - startTime);
-            document.getElementById('timerDisplay').innerText = tempoDecorrido.toISOString().substr(14, 8);
+            // 5. CRONÓMETRO
+            const tempo = new Date(Date.now() - startTime);
+            document.getElementById('timerDisplay').innerText = tempo.toISOString().substr(14, 8);
 
             renderer.render(scene, camera);
         }
 
-        // Redimensionar tela se o usuário girar o celular ou mudar janela
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
