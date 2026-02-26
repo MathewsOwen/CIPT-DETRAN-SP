@@ -2,17 +2,17 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | VERSÃO FINAL</title>
+    <title>DETRAN-SP 3D | SIMULADOR FINAL</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; }
-        .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; border: 2px solid #ed1c24; }
+        .timer { font-size: 35px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 30px; border-radius: 12px; border: 2px solid #ed1c24; }
         #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-weight: bold; z-index: 100; }
     </style>
 </head>
 <body>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
-    <div id="status">🚀 A carregar Ferrari e Cidade...</div>
+    <div id="status">🚀 Ajustando proporções reais...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
@@ -21,8 +21,7 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
 
-        // AJUSTE: O '50000' permite ver objetos muito distantes sem eles sumirem
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 30000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
@@ -30,7 +29,7 @@
 
         scene.add(new THREE.AmbientLight(0xffffff, 1.5));
         const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(100, 500, 100);
+        sun.position.set(100, 300, 100);
         scene.add(sun);
 
         const loader = new GLTFLoader();
@@ -50,22 +49,19 @@
             // 2. CARREGAR FERRARI
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                car.scale.set(70, 70, 70); 
                 
-                // AJUSTE: Nasce um pouco mais alto (Y=10) para evitar colisão imediata
-                car.position.set(0, 10, 0); 
+                // ESCALA REVISADA: De 130 para 40 (Tamanho padrão de rua)
+                car.scale.set(40, 40, 40); 
                 
+                car.position.set(0, 5, 0); 
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ TUDO PRONTO! USE AS SETAS.";
+                
+                document.getElementById('status').innerText = "✅ ESCALA 1:1 ATIVADA. DIRIJA COM CUIDADO.";
                 document.getElementById('status').style.backgroundColor = "green";
-            }, undefined, (err) => {
-                document.getElementById('status').innerText = "❌ ERRO AO CARREGAR FERRARI";
             });
         }, (xhr) => {
             const p = Math.round((xhr.loaded / xhr.total) * 100);
-            document.getElementById('status').innerText = "A carregar cidade: " + p + "%";
-        }, (err) => {
-            document.getElementById('status').innerText = "❌ ERRO AO CARREGAR CIDADE";
+            document.getElementById('status').innerText = "Carregando simulador: " + p + "%";
         });
 
         window.addEventListener('keydown', e => keys[e.code] = true);
@@ -75,13 +71,13 @@
             requestAnimationFrame(animate);
 
             if (car && city) {
-                // FÍSICA DO CHÃO (Suspensão)
-                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 30, car.position.z);
+                // SUSPENSÃO (Laser para o chão)
+                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 10, car.position.z);
                 raycasterChao.set(origemLaser, new THREE.Vector3(0, -1, 0));
                 
                 const intersecs = raycasterChao.intersectObject(city, true);
                 if (intersecs.length > 0) {
-                    car.position.y = intersecs[0].point.y + 0.2;
+                    car.position.y = intersecs[0].point.y + 0.1;
                 }
 
                 // COLISÃO FRONTAL
@@ -91,25 +87,24 @@
                 
                 const obstaculos = raycasterFrente.intersectObject(city, true);
                 
-                // Distância de colisão aumentada para 15 por causa da escala 130
-                if (obstaculos.length > 0 && obstaculos[0].distance < 15) {
+                // Distância de colisão reduzida para 6 (proporcional ao carro menor)
+                if (obstaculos.length > 0 && obstaculos[0].distance < 6) {
                     podeAndar = false;
-                    document.getElementById('status').innerText = "⚠️ COLISÃO! USE A RÉ.";
+                    document.getElementById('status').innerText = "⚠️ PARE! OBSTÁCULO À FRENTE.";
                     document.getElementById('status').style.backgroundColor = "orange";
                 } else {
                     podeAndar = true;
                 }
 
-                // MOVIMENTAÇÃO
-                if (keys['ArrowUp'] && podeAndar) car.translateZ(3.0); 
-                if (keys['ArrowDown']) car.translateZ(-1.5);
-                if (keys['ArrowLeft']) car.rotation.y += 0.05;
-                if (keys['ArrowRight']) car.rotation.y -= 0.05;
+                // MOVIMENTAÇÃO (Suavizada para o tamanho 40)
+                if (keys['ArrowUp'] && podeAndar) car.translateZ(1.2); 
+                if (keys['ArrowDown']) car.translateZ(-0.6);
+                if (keys['ArrowLeft']) car.rotation.y += 0.04;
+                if (keys['ArrowRight']) car.rotation.y -= 0.04;
 
-                // CÂMARA (Afastada para escala 130)
-                // Y=50 (mais alto), Z=-150 (mais longe)
-                // Procure essa linha no final do código (dentro do animate)
-const offset = new THREE.Vector3(0, 25, -60).applyMatrix4(car.matrixWorld);
+                // CÂMERA (Aproximada para o tamanho 40)
+                // Y=15 (altura), Z=-35 (distância)
+                const offset = new THREE.Vector3(0, 15, -35).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
