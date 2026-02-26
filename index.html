@@ -2,83 +2,90 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | MODO LEVE</title>
+    <title>DETRAN-SP 3D | SIMULADOR OFICIAL</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        #timer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 24px; color: white; background: red; padding: 5px 15px; z-index: 20; }
-        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; z-index: 20; }
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
+        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.85); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; box-shadow: 0 0 15px rgba(0,0,0,0.5); z-index: 100; }
+        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; z-index: 100; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div id="timer" id="clock">00:00</div>
-    <div id="status">Iniciando...</div>
+    <div id="timer">00:00.00</div>
+    <div id="status">🏎️ Restaurando Ferrari Roma original...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        // 1. RENDERIZADOR ULTRA SIMPLES
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: false, precision: "lowp" });
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 8000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding; // VOLTA A COR REAL
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        // ILUMINAÇÃO COMPLETA (Para tirar o preto do carro)
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+        sun.position.set(50, 100, 50);
+        scene.add(sun);
 
-        let car, city;
-        const keys = {};
         const loader = new GLTFLoader();
+        let car, city, startTime = Date.now();
+        let keys = {};
 
-        // 2. CARREGAMENTO INTELIGENTE (Não trava o cronômetro)
-        async function loadAssets() {
-            try {
-                document.getElementById('status').innerText = "Carregando Cidade (Isso pode demorar)...";
-                const cityData = await loader.loadAsync('city_-_cidade (2).glb');
-                city = cityData.scene;
-                scene.add(city);
-                
-                document.getElementById('status').innerText = "Cidade OK! Carregando Ferrari...";
-                const carData = await loader.loadAsync('low_poly_ferrari_roma.glb');
-                car = carData.scene;
-                car.scale.set(6, 6, 6);
-                car.position.set(0, 0.1, 0);
+        // CARREGAMENTO DAS FOTOS QUE VOCÊ MOSTROU
+        loader.load('city_-_cidade (2).glb', (gltf) => {
+            city = gltf.scene;
+            scene.add(city);
+            
+            loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
+                car = gltfCar.scene;
+                car.scale.set(6, 6, 6); // ESCALA 6 APROVADA
+                car.position.set(0, 0.15, 0); // ALTURA SEGURA
                 scene.add(car);
-                
-                document.getElementById('status').innerText = "✅ TUDO PRONTO!";
-                animate();
-            } catch (e) {
-                document.getElementById('status').innerText = "Erro de Memória. O arquivo da cidade é muito grande.";
-            }
-        }
+                document.getElementById('status').innerText = "✅ TUDO PERFEITO! PODE ACELERAR.";
+                document.getElementById('status').style.color = "#00ff00";
+            });
+        });
 
         window.onkeydown = (e) => keys[e.code] = true;
         window.onkeyup = (e) => keys[e.code] = false;
 
-        // 3. LOOP DE ANIMAÇÃO OTIMIZADO
         function animate() {
             requestAnimationFrame(animate);
             if (car) {
-                if (keys['ArrowUp']) car.translateZ(1.2);
-                if (keys['ArrowDown']) car.translateZ(-0.6);
-                if (keys['ArrowLeft']) car.rotation.y += 0.05;
-                if (keys['ArrowRight']) car.rotation.y -= 0.05;
+                // VELOCIDADE TURBO SOLICITADA
+                const speed = 1.2;
+                if (keys['ArrowUp']) car.translateZ(speed);
+                if (keys['ArrowDown']) car.translateZ(-speed/2);
+                if (keys['ArrowLeft']) car.rotation.y += 0.06;
+                if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-                const offset = new THREE.Vector3(0, 3, -10).applyMatrix4(car.matrixWorld);
-                camera.position.copy(offset);
+                // CÂMERA DE CORRIDA (VOLTOU!)
+                const offset = new THREE.Vector3(0, 3.5, -11).applyMatrix4(car.matrixWorld);
+                camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
+
+            // CRONÔMETRO ESTILIZADO
+            const delta = Date.now() - startTime;
+            const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
+            const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
+            const ms = Math.floor((delta % 1000) / 10).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${mins}:${secs}.${ms}`;
+
             renderer.render(scene, camera);
         }
+        animate();
 
-        // Cronômetro independente
-        setInterval(() => {
-            const t = new Date();
-            document.getElementById('timer').innerText = t.getSeconds();
-        }, 1000);
-
-        loadAssets();
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
     </script>
 </body>
 </html>
