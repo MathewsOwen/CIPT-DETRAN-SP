@@ -2,46 +2,37 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | SIMULADOR PROFISSIONAL</title>
+    <title>DETRAN-SP 3D | VERSÃO FINAL</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-        
-        /* Cronómetro */
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; }
-        .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; border: 2px solid #ed1c24; box-shadow: 0 0 15px rgba(237, 28, 36, 0.5); }
-        
-        /* Status Inferior */
+        .timer { font-size: 40px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 15px; border: 2px solid #ed1c24; }
         #status { position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-weight: bold; z-index: 100; }
-        
-        #logo { position: absolute; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div id="logo">DETRAN-SP: TESTE DE DIREÇÃO</div>
     <div id="ui"><div class="timer" id="timerDisplay">00:00.00</div></div>
-    <div id="status">🚀 A preparar simulador...</div>
+    <div id="status">🚀 A carregar Ferrari e Cidade...</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        // --- CENA ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        // AJUSTE: O '50000' permite ver objetos muito distantes sem eles sumirem
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        // --- LUZES ---
         scene.add(new THREE.AmbientLight(0xffffff, 1.5));
         const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(100, 200, 100);
+        sun.position.set(100, 500, 100);
         scene.add(sun);
 
-        // --- VARIÁVEIS ---
         const loader = new GLTFLoader();
         let car, city;
         let keys = {};
@@ -51,43 +42,41 @@
         const raycasterChao = new THREE.Raycaster();
         const raycasterFrente = new THREE.Raycaster();
 
-        // --- CARREGAR MODELOS ---
-        
-        // 1. Carrega a Cidade
+        // 1. CARREGAR CIDADE
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
             
-            // 2. Carrega a Ferrari Roma
+            // 2. CARREGAR FERRARI
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                
-                // ESCALA REVISADA: 130 para ficar proporcional ao caminhão e prédios
                 car.scale.set(130, 130, 130); 
                 
-                // Posição no asfalto
-                car.position.set(0, 2, 0); 
+                // AJUSTE: Nasce um pouco mais alto (Y=10) para evitar colisão imediata
+                car.position.set(0, 10, 0); 
                 
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ TUDO PRONTO! CONDUZA COM AS SETAS.";
+                document.getElementById('status').innerText = "✅ TUDO PRONTO! USE AS SETAS.";
                 document.getElementById('status').style.backgroundColor = "green";
+            }, undefined, (err) => {
+                document.getElementById('status').innerText = "❌ ERRO AO CARREGAR FERRARI";
             });
         }, (xhr) => {
             const p = Math.round((xhr.loaded / xhr.total) * 100);
             document.getElementById('status').innerText = "A carregar cidade: " + p + "%";
+        }, (err) => {
+            document.getElementById('status').innerText = "❌ ERRO AO CARREGAR CIDADE";
         });
 
-        // --- CONTROLES ---
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // --- LOOP DE ANIMAÇÃO ---
         function animate() {
             requestAnimationFrame(animate);
 
             if (car && city) {
-                // 1. SUSPENSÃO (Evita que o asfalto cubra o carro)
-                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 20, car.position.z);
+                // FÍSICA DO CHÃO (Suspensão)
+                const origemLaser = new THREE.Vector3(car.position.x, car.position.y + 30, car.position.z);
                 raycasterChao.set(origemLaser, new THREE.Vector3(0, -1, 0));
                 
                 const intersecs = raycasterChao.intersectObject(city, true);
@@ -95,40 +84,35 @@
                     car.position.y = intersecs[0].point.y + 0.2;
                 }
 
-                // 2. COLISÃO (Raio laser para frente)
+                // COLISÃO FRONTAL
                 const direcao = new THREE.Vector3();
                 car.getWorldDirection(direcao);
                 raycasterFrente.set(car.position, direcao);
                 
                 const obstaculos = raycasterFrente.intersectObject(city, true);
                 
-                // Se detectar algo a menos de 10 metros (devido à escala maior)
-                if (obstaculos.length > 0 && obstaculos[0].distance < 10) {
+                // Distância de colisão aumentada para 15 por causa da escala 130
+                if (obstaculos.length > 0 && obstaculos[0].distance < 15) {
                     podeAndar = false;
                     document.getElementById('status').innerText = "⚠️ COLISÃO! USE A RÉ.";
                     document.getElementById('status').style.backgroundColor = "orange";
                 } else {
                     podeAndar = true;
-                    if(document.getElementById('status').style.backgroundColor === "orange") {
-                        document.getElementById('status').innerText = "✅ PISTA LIVRE";
-                        document.getElementById('status').style.backgroundColor = "green";
-                    }
                 }
 
-                // 3. MOVIMENTAÇÃO (Ajustada para o novo tamanho)
-                if (keys['ArrowUp'] && podeAndar) car.translateZ(2.5); // Mais rápido por ser maior
-                if (keys['ArrowDown']) car.translateZ(-1.2);
-                if (keys['ArrowLeft']) car.rotation.y += 0.04;
-                if (keys['ArrowRight']) car.rotation.y -= 0.04;
+                // MOVIMENTAÇÃO
+                if (keys['ArrowUp'] && podeAndar) car.translateZ(3.0); 
+                if (keys['ArrowDown']) car.translateZ(-1.5);
+                if (keys['ArrowLeft']) car.rotation.y += 0.05;
+                if (keys['ArrowRight']) car.rotation.y -= 0.05;
 
-                // 4. CÂMERA (Afastada para o novo tamanho do carro)
-                // Y=40 (altura) e Z=-100 (distância atrás do carro)
-                const offset = new THREE.Vector3(0, 40, -100).applyMatrix4(car.matrixWorld);
+                // CÂMARA (Afastada para escala 130)
+                // Y=50 (mais alto), Z=-150 (mais longe)
+                const offset = new THREE.Vector3(0, 50, -150).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
 
-            // 5. CRONÓMETRO
             const tempo = new Date(Date.now() - startTime);
             document.getElementById('timerDisplay').innerText = tempo.toISOString().substr(14, 8);
 
