@@ -108,7 +108,8 @@
 
                 // CÂMARA (Afastada para escala 130)
                 // Y=50 (mais alto), Z=-150 (mais longe)
-                const offset = new THREE.Vector3(0, 50, -150).applyMatrix4(car.matrixWorld);
+                // Procure essa linha no final do código (dentro do animate)
+const offset = new THREE.Vector3(0, 25, -60).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
