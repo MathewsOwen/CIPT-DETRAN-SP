@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | ROTA CORRIGIDA</title>
+    <title>DETRAN-SP | FERRARI ALINHADA</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
@@ -19,10 +19,10 @@
 <body>
 
     <div id="timer">Tempo: 00:00.00</div>
-    <div id="status">🚦 AGUARDANDO RESPOSTA...</div>
+    <div id="status">🚥 ALINHANDO MOTOR...</div>
 
     <div id="quiz-container">
-        <h2 id="pergunta-txt" style="color:#333">Pergunta 1</h2>
+        <h2 id="pergunta-txt" style="color:#333">Carregando Prova...</h2>
         <div id="opcoes"></div>
     </div>
 
@@ -48,13 +48,12 @@
         let etapaAtual = 0;
         let emMovimento = false;
 
-        // --- ROTA PROGRAMADA (EIXO Z) ---
-        // Se o carro bater na parede, vamos inverter esses números para positivos ou mudar o X
+        // --- DESTINOS EM EIXO NEGATIVO (Para andar de frente na rua) ---
         const destinos = [
-            { z: 150, q: "O sinal amarelo significa:", r: ["Acelerar", "Atenção/Parar"], c: 1 },
-            { z: 350, q: "Placa de 'PARE' é:", r: ["Obrigatória", "Opcional"], c: 0 },
-            { z: 600, q: "Beber e dirigir pode?", r: ["Não", "Sim"], c: 0 },
-            { z: 900, q: "Fim da linha! Parabéns!", r: ["Sair", "Reiniciar"], c: 0 }
+            { z: -150, q: "Sinal amarelo significa:", r: ["Acelerar", "Atenção/Parar"], c: 1 },
+            { z: -350, q: "Placa de 'PARE' é:", r: ["Obrigatória", "Opcional"], c: 0 },
+            { z: -600, q: "Pode dirigir sem cinto?", r: ["Não", "Sim"], c: 0 },
+            { z: -900, q: "Final do Teste! Parabéns!", r: ["Concluir", "Reiniciar"], c: 0 }
         ];
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
@@ -62,7 +61,7 @@
             
             loader.load('vending_machine.glb', (gM) => {
                 const m = gM.scene; m.scale.set(5,5,5); 
-                m.position.set(60, 0, 50); // Move a máquina para longe da pista principal
+                m.position.set(60, 0, -50); 
                 scene.add(m);
             });
 
@@ -70,12 +69,10 @@
                 car = gC.scene; 
                 car.scale.set(6, 6, 6); 
                 
-                // --- POSIÇÃO DE LARGADA NA RUA ---
-                // X=35 é o meio da rua. Z=0 é o começo.
+                // --- POSIÇÃO E ROTAÇÃO ---
                 car.position.set(35, 0.15, 0); 
-                
-                // Força o carro a olhar para a frente da rua (Eixo Z)
-                car.rotation.y = Math.PI; // Se ele estiver de ré, mude para 0 ou Math.PI
+                // GIRAMOS O CARRO 180 GRAUS (Math.PI) para ele olhar para a rua
+                car.rotation.y = Math.PI; 
                 
                 scene.add(car);
                 montarPergunta();
@@ -98,11 +95,11 @@
         window.verificar = function(index) {
             if(index === destinos[etapaAtual].c) {
                 document.getElementById('quiz-container').style.display = 'none';
-                document.getElementById('status').innerText = "🚗 ACERTOU! DIRIGINDO ATÉ O PRÓXIMO PONTO...";
+                document.getElementById('status').innerText = "🚗 ACERTOU! AVANÇANDO...";
                 emMovimento = true;
                 if(!startTime) startTime = Date.now();
             } else {
-                alert("❌ Errado! Responda corretamente para o carro avançar.");
+                alert("❌ Resposta Errada! Tente novamente.");
             }
         }
 
@@ -110,19 +107,19 @@
             requestAnimationFrame(animate);
             if (car) {
                 if (emMovimento) {
-                    // MOVE DIRETAMENTE NO EIXO Z (Impede de ir para os lados)
-                    car.position.z += 1.0; 
+                    // ANDA PARA FRENTE (Subtraindo no Z porque ele está olhando para o lado negativo)
+                    car.position.z -= 1.0; 
                     
-                    // Checa se passou do destino
-                    if (car.position.z >= destinos[etapaAtual].z) {
+                    // Checa se atingiu o destino (usando <= porque estamos indo para números negativos)
+                    if (car.position.z <= destinos[etapaAtual].z) {
                         emMovimento = false;
                         etapaAtual++;
                         setTimeout(montarPergunta, 500);
                     }
                 }
 
-                // Câmera fixa atrás do carro
-                const offset = new THREE.Vector3(0, 6, -18).applyMatrix4(car.matrixWorld);
+                // Câmera dinâmica
+                const offset = new THREE.Vector3(0, 6, 18).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
