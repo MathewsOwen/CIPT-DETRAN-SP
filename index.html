@@ -2,37 +2,31 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | DESAFIO QUIZ</title>
+    <title>DETRAN-SP | CIRCUITO DE PROVA</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
-        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 10; }
+        #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 10; }
+        #rank { position: absolute; top: 15px; right: 20px; font-size: 18px; color: gold; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; z-index: 10; }
         
-        /* ESTILO DO POP-UP */
         #quiz-container { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 30px; border-radius: 20px; border: 5px solid #ed1c24;
-            text-align: center; z-index: 1000; box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            width: 400px;
+            text-align: center; z-index: 1000; display: none; width: 450px;
         }
-        .btn-resp { 
-            display: block; width: 100%; margin: 10px 0; padding: 15px; 
-            font-size: 18px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc;
-            transition: 0.3s;
-        }
-        .btn-resp:hover { background: #f0f0f0; border-color: #ed1c24; }
+        .btn-resp { display: block; width: 100%; margin: 10px 0; padding: 12px; font-size: 16px; cursor: pointer; border-radius: 8px; border: 1px solid #ccc; background: #eee; }
+        .btn-resp:hover { background: #ddd; }
         #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="timer">00:00.00</div>
-    <div id="status">🚦 Responda para liberar o motor!</div>
+    <div id="timer">Tempo: 00:00.00</div>
+    <div id="rank">Melhor Tempo: --:--</div>
+    <div id="status">🚀 Dirija até o primeiro Checkpoint!</div>
 
     <div id="quiz-container">
-        <h2 id="pergunta">Qual a velocidade máxima permitida em vias urbanas locais?</h2>
-        <button class="btn-resp" onclick="verificarResposta(false)">80 km/h</button>
-        <button class="btn-resp" onclick="verificarResposta(true)">30 km/h</button>
-        <button class="btn-resp" onclick="verificarResposta(false)">110 km/h</button>
+        <h2 id="pergunta-txt">Pergunta</h2>
+        <div id="opcoes"></div>
     </div>
 
     <script type="module">
@@ -53,40 +47,82 @@
         scene.add(sun);
 
         const loader = new GLTFLoader();
-        let car, city, startTime = Date.now();
+        let car, city, startTime = null, finalTime = null;
         let keys = {};
         
-        // VARIÁVEL DE CONTROLE
-        window.podeAndar = false; 
+        // --- LÓGICA DO JOGO ---
+        let checkpointAtual = 0;
+        let podeAndar = true;
+        let jogoFinalizado = false;
+
+        const perguntas = [
+            { q: "Qual a cor da placa de regulamentação?", r: ["Vermelha", "Amarela", "Verde"], c: 0 },
+            { q: "O que significa a placa 'PARE'?", r: ["Diminuir", "Parada Obrigatória", "Atenção"], c: 1 },
+            { q: "Preferência na rotatória é de quem?", r: ["Quem vem da direita", "Quem já está nela", "Quem corre mais"], c: 1 },
+            { q: "Ultrapassagem pela direita é permitida?", r: ["Sim, sempre", "Nunca", "Só se o veículo da frente for virar à esquerda"], c: 2 },
+            { q: "Uso do cinto é obrigatório para:", r: ["Só motorista", "Motorista e passageiros", "Só em rodovias"], c: 1 },
+            { q: "Beber e dirigir resulta em:", r: ["Multa leve", "Nada", "Multa gravíssima e suspensão"], c: 2 }
+        ];
+
+        const distanciasCheckpoints = [100, 250, 400, 600, 800, 1000]; // Metros percorridos
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
-            city = gltf.scene;
-            scene.add(city);
-            
-            loader.load('vending_machine.glb', (gltfMachine) => {
-                const machine = gltfMachine.scene;
-                machine.scale.set(5, 5, 5);
-                machine.position.set(45, 0, -30);
-                scene.add(machine);
+            scene.add(gltf.scene);
+            loader.load('vending_machine.glb', (gltfM) => {
+                const m = gltfM.scene; m.scale.set(5,5,5); m.position.set(45,0,-30); scene.add(m);
             });
-
-            loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
-                car = gltfCar.scene;
-                car.scale.set(6, 6, 6);
-                car.position.set(0, 0.15, 0);
-                scene.add(car);
+            loader.load('low_poly_ferrari_roma.glb', (gltfC) => {
+                car = gltfC.scene; car.scale.set(6,6,6); car.position.set(0, 0.15, 0); scene.add(car);
+                mostrarMelhorTempo();
             });
         });
 
-        // FUNÇÃO GLOBAL PARA O BOTÃO FUNCIONAR
-        window.verificarResposta = function(correto) {
-            if(correto) {
-                alert("✅ Correto! Motor liberado.");
+        window.verificarResposta = function(index) {
+            if(index === perguntas[checkpointAtual].c) {
+                checkpointAtual++;
+                podeAndar = true;
                 document.getElementById('quiz-container').style.display = 'none';
-                window.podeAndar = true;
+                if(checkpointAtual >= perguntas.length) {
+                    finalizarCorrida();
+                } else {
+                    document.getElementById('status').innerText = "✅ Correto! Siga para o próximo ponto.";
+                }
             } else {
-                alert("❌ Errado! Tente novamente.");
+                alert("❌ Errado! O carro continua travado.");
             }
+        }
+
+        function abrirQuiz() {
+            podeAndar = false;
+            const q = perguntas[checkpointAtual];
+            document.getElementById('pergunta-txt').innerText = q.q;
+            const container = document.getElementById('opcoes');
+            container.innerHTML = "";
+            q.r.forEach((txt, i) => {
+                container.innerHTML += `<button class="btn-resp" onclick="verificarResposta(${i})">${txt}</button>`;
+            });
+            document.getElementById('quiz-container').style.display = 'block';
+        }
+
+        function finalizarCorrida() {
+            jogoFinalizado = true;
+            podeAndar = false;
+            finalTime = document.getElementById('timer').innerText;
+            document.getElementById('status').innerText = "🏁 CHEGADA! Tempo: " + finalTime;
+            salvarTempo(finalTime);
+        }
+
+        function salvarTempo(tempo) {
+            const melhor = localStorage.getItem('bestTime');
+            if(!melhor || tempo < melhor) {
+                localStorage.setItem('bestTime', tempo);
+                mostrarMelhorTempo();
+            }
+        }
+
+        function mostrarMelhorTempo() {
+            const melhor = localStorage.getItem('bestTime');
+            if(melhor) document.getElementById('rank').innerText = "Melhor Tempo: " + melhor;
         }
 
         window.onkeydown = (e) => keys[e.code] = true;
@@ -94,19 +130,27 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            if (car && window.podeAndar) { // SÓ ANDA SE PODEANDAR FOR TRUE
+            if (car && podeAndar && !jogoFinalizado) {
+                if(!startTime && (keys['ArrowUp'])) startTime = Date.now();
+
                 const speed = 1.2;
                 if (keys['ArrowUp']) car.translateZ(speed);
                 if (keys['ArrowDown']) car.translateZ(-speed/2);
                 if (keys['ArrowLeft']) car.rotation.y += 0.06;
                 if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
+                // Checar distância para o próximo checkpoint
+                let distancia = car.position.length(); 
+                if(checkpointAtual < distanciasCheckpoints.length && distancia > distanciasCheckpoints[checkpointAtual]) {
+                    abrirQuiz();
+                }
+
                 const offset = new THREE.Vector3(0, 4, -12).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
 
-            if(window.podeAndar) {
+            if(startTime && !jogoFinalizado) {
                 const delta = Date.now() - startTime;
                 const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
                 const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
