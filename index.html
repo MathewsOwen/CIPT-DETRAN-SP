@@ -3,46 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DETRAN-SP | Simulador de Exame</title>
+    <title>DETRAN-SP | Simulador Ultra Rápido</title>
     <style>
         :root { --primary: #ed1c24; --accent-blue: #0055ff; --dark: #000; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
 
-        /* Interface de Login (Já abre aqui) */
-        #ui-layer { position: fixed; inset: 0; z-index: 4000; background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,1) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
-        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); padding: 50px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        /* Interface de Login - Transição Instantânea */
+        #ui-layer { position: fixed; inset: 0; z-index: 4000; background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,1) 100%); display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
+        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); padding: 50px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); }
         
         .logo-main { font-size: 50px; margin-bottom: 20px; font-weight: 900; letter-spacing: -2px; }
         .sp-text { color: var(--accent-blue); }
 
         input { background: rgba(255,255,255,0.08); border: 1px solid #333; padding: 18px; border-radius: 12px; color: white; font-size: 18px; width: 300px; margin: 25px 0; outline: none; text-align: center; }
-        input:focus { border-color: var(--accent-blue); }
-        
-        .main-btn { background: var(--primary); color: white; border: none; padding: 18px 50px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
-        .main-btn:hover { transform: translateY(-3px); background: #ff2a33; }
+        .main-btn { background: var(--primary); color: white; border: none; padding: 18px 50px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+        .main-btn:hover { background: #ff2a33; transform: scale(1.05); }
 
-        /* Elementos do Jogo */
+        /* Elementos de Jogo */
         #timer { position: absolute; top: 25px; left: 25px; font-size: 24px; color: white; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 15px 25px; border-radius: 50px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); }
+        #ranking-container { position: fixed; top: 25px; right: 25px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); color: white; padding: 20px; border-radius: 15px; z-index: 100; min-width: 200px; border: 1px solid rgba(255,255,255,0.1); }
         
-        #ranking-container { position: fixed; top: 25px; right: 25px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); color: white; padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); z-index: 100; min-width: 200px; }
-        
-        #quiz-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 45px; border-radius: 25px; width: 400px; display: none; z-index: 3000; box-shadow: 0 0 120px rgba(0,0,0,0.6); border-bottom: 10px solid var(--primary); }
-        .btn-resp { display: block; width: 100%; margin: 15px 0; padding: 18px; font-size: 17px; cursor: pointer; border-radius: 12px; border: 1px solid #eee; background: #fcfcfc; font-weight: 600; color: #333; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; font-size: 12px; color: #aaa; text-transform: uppercase; }
-        td { padding: 5px 0; font-weight: bold; }
+        #quiz-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 25px; width: 400px; display: none; z-index: 3000; box-shadow: 0 0 100px rgba(0,0,0,0.5); border-bottom: 8px solid var(--primary); }
+        .btn-resp { display: block; width: 100%; margin: 12px 0; padding: 15px; font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #eee; background: #fcfcfc; font-weight: 600; color: #333; }
 
-        #loading-screen { position: fixed; inset: 0; background: #111; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .loader { width: 220px; height: 3px; background: #222; border-radius: 5px; margin-top: 20px; overflow: hidden; }
-        .loader-bar { width: 0%; height: 100%; background: var(--primary); transition: 0.4s; }
+        /* Loading Minimalista */
+        #loading-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.3s; }
+        .loader-bar { width: 0%; height: 3px; background: var(--primary); transition: width 0.2s; position: absolute; bottom: 0; left: 0; }
+        table { width: 100%; margin-top: 10px; font-size: 14px; }
+        td { padding: 4px 0; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <h3 style="letter-spacing: 3px;">CARREGANDO CIRCUITO</h3>
-        <div class="loader"><div class="loader-bar" id="l-bar"></div></div>
+        <div style="letter-spacing: 5px; font-weight: bold;">CARREGANDO...</div>
+        <div class="loader-bar" id="l-bar"></div>
     </div>
 
     <div id="ui-layer">
@@ -50,16 +45,13 @@
             <div class="logo-main">DETRAN<span class="sp-text">SP</span></div>
             <input type="text" id="playerName" placeholder="Nome do Aluno" maxlength="25">
             <br>
-            <button class="main-btn" onclick="iniciarProva()">Iniciar Exame</button>
+            <button class="main-btn" onclick="iniciarProva()">Entrar no Veículo</button>
         </div>
     </div>
 
     <div id="ranking-container">
-        <strong style="color: var(--accent-blue)">🏆 TOP 5 ALUNOS</strong>
-        <table id="rankingTable">
-            <thead><tr><th>Nome</th><th>Tempo</th></tr></thead>
-            <tbody></tbody>
-        </table>
+        <strong style="color: var(--accent-blue); font-size: 12px;">🏆 RECORDES</strong>
+        <table id="rankingTable"><tbody></tbody></table>
     </div>
 
     <div id="timer">00:00.0s</div>
@@ -78,12 +70,12 @@
         
         const rota = [
             { x: -114, z: 224, p: false }, 
-            { x: -50,  z: 224, p: true,  q: "Qual cor indica PARE?", r: ["Vermelho", "Verde"], c: 0 },
+            { x: -50,  z: 224, p: true,  q: "Pare no sinal vermelho?", r: ["Sim", "Não"], c: 0 },
             { x: 30,   z: 224, p: true,  q: "Cinto é obrigatório?", r: ["Sim", "Não"], c: 0 },
-            { x: 100,  z: 224, p: true,  q: "Avançar sinal vermelho é infração?", r: ["Gravíssima", "Média"], c: 0 },
-            { x: 165,  z: 224, p: false }, // Curva aberta (correção da calçada)
-            { x: 165,  z: 110, p: true,  q: "Pode usar celular?", r: ["Proibido", "Sim"], c: 0 },
-            { x: 165,  z: 10,  p: true,  q: "Exame concluído!", r: ["Salvar e Sair", "Reiniciar"], c: 0, final: true }
+            { x: 100,  z: 224, p: true,  q: "Velocidade alta é perigosa?", r: ["Sim", "Não"], c: 0 },
+            { x: 165,  z: 224, p: false }, 
+            { x: 165,  z: 110, p: true,  q: "Beber e dirigir?", r: ["Proibido", "Pode"], c: 0 },
+            { x: 165,  z: 10,  p: true,  q: "Fim do Teste!", r: ["Concluir", "Reiniciar"], c: 0, final: true }
         ];
 
         function init() {
@@ -105,29 +97,39 @@
 
         function carregarModelos() {
             const loader = new GLTFLoader();
+            const lBar = document.getElementById('l-bar');
+
+            // Carrega cidade
             loader.load('city_-_cidade (2).glb', (gltf) => {
                 gltf.scene.traverse(obj => {
                     if(["fence", "barricade", "cone", "mureta", "machine", "soda"].some(n => obj.name.toLowerCase().includes(n))) obj.visible = false;
                 });
                 scene.add(gltf.scene);
-                document.getElementById('l-bar').style.width = "60%";
+                lBar.style.width = "70%";
 
+                // Carrega carro
                 loader.load('low_poly_ferrari_roma.glb', (gC) => {
                     car = gC.scene;
                     car.scale.set(6, 6, 6);
                     car.position.set(rota[0].x, 0.15, rota[0].z);
                     scene.add(car);
-                    document.getElementById('l-bar').style.width = "100%";
-                    setTimeout(() => { document.getElementById('loading-screen').style.display = 'none'; }, 500);
+                    
+                    lBar.style.width = "100%";
+                    // SAÍDA IMEDIATA DO LOADING
+                    document.getElementById('loading-screen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('loading-screen').remove();
+                        document.getElementById('ui-layer').style.display = 'flex';
+                    }, 300);
                 });
             });
         }
 
         window.iniciarProva = function() {
-            const input = document.getElementById('playerName');
-            if(input.value.length < 3) return alert("Digite o nome.");
+            const name = document.getElementById('playerName').value;
+            if(name.length < 3) return alert("Digite o nome.");
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-            motorista = input.value;
+            motorista = name;
             document.getElementById('ui-layer').style.display = 'none';
             emMovimento = true;
             startTime = Date.now();
@@ -144,7 +146,7 @@
                     localStorage.setItem('detranRanking', JSON.stringify(d));
                     location.reload();
                 } else { etapaAtual++; emMovimento = true; }
-            } else { alert("Infração!"); }
+            } else { alert("Atenção: Resposta errada!"); }
         }
 
         function montarQuiz() {
