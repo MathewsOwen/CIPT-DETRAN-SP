@@ -2,71 +2,99 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP 3D | AJUSTE FINAL</title>
+    <title>DETRAN-SP | DESAFIO QUIZ</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
-        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px 25px; border-radius: 12px; border: 2px solid #ed1c24; z-index: 100; }
-        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; z-index: 100; }
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
+        #timer { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 10; }
+        
+        /* ESTILO DO POP-UP */
+        #quiz-container { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 30px; border-radius: 20px; border: 5px solid #ed1c24;
+            text-align: center; z-index: 1000; box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            width: 400px;
+        }
+        .btn-resp { 
+            display: block; width: 100%; margin: 10px 0; padding: 15px; 
+            font-size: 18px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc;
+            transition: 0.3s;
+        }
+        .btn-resp:hover { background: #f0f0f0; border-color: #ed1c24; }
+        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
+
     <div id="timer">00:00.00</div>
-    <div id="status">🥤 Movendo máquina para a calçada...</div>
+    <div id="status">🚦 Responda para liberar o motor!</div>
+
+    <div id="quiz-container">
+        <h2 id="pergunta">Qual a velocidade máxima permitida em vias urbanas locais?</h2>
+        <button class="btn-resp" onclick="verificarResposta(false)">80 km/h</button>
+        <button class="btn-resp" onclick="verificarResposta(true)">30 km/h</button>
+        <button class="btn-resp" onclick="verificarResposta(false)">110 km/h</button>
+    </div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); 
-
+        scene.background = new THREE.Color(0x87CEEB);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputEncoding = THREE.sRGBEncoding; 
+        renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
         scene.add(new THREE.AmbientLight(0xffffff, 1.8));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
         sun.position.set(10, 50, 10);
         scene.add(sun);
 
         const loader = new GLTFLoader();
         let car, city, startTime = Date.now();
         let keys = {};
+        
+        // VARIÁVEL DE CONTROLE
+        window.podeAndar = false; 
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
             city = gltf.scene;
             scene.add(city);
             
-            // CARREGAR MÁQUINA DE REFRI (Vending Machine)
             loader.load('vending_machine.glb', (gltfMachine) => {
                 const machine = gltfMachine.scene;
-                machine.scale.set(5, 5, 5); // Escala 5 para ficar imponente
-                
-                // --- AJUSTE DE POSIÇÃO ---
-                // Mudei o 20 para 45 (Lado) e o -15 para -30 (Profundidade)
-                // Isso deve tirar ela do meio da pista e colocar na frente da lanchonete
-                machine.position.set(45, 0, -30); 
-                
+                machine.scale.set(5, 5, 5);
+                machine.position.set(45, 0, -30);
                 scene.add(machine);
             });
 
             loader.load('low_poly_ferrari_roma.glb', (gltfCar) => {
                 car = gltfCar.scene;
-                car.scale.set(6, 6, 6); 
-                car.position.set(0, 0.15, 0); 
+                car.scale.set(6, 6, 6);
+                car.position.set(0, 0.15, 0);
                 scene.add(car);
-                document.getElementById('status').innerText = "✅ MÁQUINA NA CALÇADA!";
             });
         });
+
+        // FUNÇÃO GLOBAL PARA O BOTÃO FUNCIONAR
+        window.verificarResposta = function(correto) {
+            if(correto) {
+                alert("✅ Correto! Motor liberado.");
+                document.getElementById('quiz-container').style.display = 'none';
+                window.podeAndar = true;
+            } else {
+                alert("❌ Errado! Tente novamente.");
+            }
+        }
 
         window.onkeydown = (e) => keys[e.code] = true;
         window.onkeyup = (e) => keys[e.code] = false;
 
         function animate() {
             requestAnimationFrame(animate);
-            if (car) {
+            if (car && window.podeAndar) { // SÓ ANDA SE PODEANDAR FOR TRUE
                 const speed = 1.2;
                 if (keys['ArrowUp']) car.translateZ(speed);
                 if (keys['ArrowDown']) car.translateZ(-speed/2);
@@ -78,11 +106,13 @@
                 camera.lookAt(car.position);
             }
 
-            const delta = Date.now() - startTime;
-            const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
-            const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
-            const ms = Math.floor((delta % 1000) / 10).toString().padStart(2, '0');
-            document.getElementById('timer').innerText = `${mins}:${secs}.${ms}`;
+            if(window.podeAndar) {
+                const delta = Date.now() - startTime;
+                const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
+                const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
+                const ms = Math.floor((delta % 1000) / 10).toString().padStart(2, '0');
+                document.getElementById('timer').innerText = `${mins}:${secs}.${ms}`;
+            }
 
             renderer.render(scene, camera);
         }
