@@ -2,30 +2,31 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | CIRCUITO DE PROVA</title>
+    <title>DETRAN-SP | CIRCUITO OFICIAL</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
-        #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 10; }
-        #rank { position: absolute; top: 15px; right: 20px; font-size: 18px; color: gold; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; z-index: 10; }
+        #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
+        #rank { position: absolute; top: 15px; right: 20px; font-size: 18px; color: gold; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; z-index: 100; }
         
+        /* POP-UP DE PERGUNTA */
         #quiz-container { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 30px; border-radius: 20px; border: 5px solid #ed1c24;
-            text-align: center; z-index: 1000; display: none; width: 450px;
+            text-align: center; z-index: 2000; display: none; width: 400px; box-shadow: 0 0 100px rgba(0,0,0,0.8);
         }
-        .btn-resp { display: block; width: 100%; margin: 10px 0; padding: 12px; font-size: 16px; cursor: pointer; border-radius: 8px; border: 1px solid #ccc; background: #eee; }
-        .btn-resp:hover { background: #ddd; }
-        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.8); padding: 12px; font-weight: bold; }
+        .btn-resp { display: block; width: 100%; margin: 10px 0; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc; background: #f9f9f9; font-weight: bold; }
+        .btn-resp:hover { background: #ed1c24; color: white; }
+        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.9); padding: 15px; font-weight: bold; z-index: 100; font-size: 18px; }
     </style>
 </head>
 <body>
 
-    <div id="timer">Tempo: 00:00.00</div>
-    <div id="rank">Melhor Tempo: --:--</div>
-    <div id="status">🚀 Dirija até o primeiro Checkpoint!</div>
+    <div id="timer">00:00.00</div>
+    <div id="rank">Melhor: --:--</div>
+    <div id="status">🚀 ACELERE PARA COMEÇAR O TESTE!</div>
 
     <div id="quiz-container">
-        <h2 id="pergunta-txt">Pergunta</h2>
+        <h2 id="pergunta-txt" style="color:#333">Pergunta</h2>
         <div id="opcoes"></div>
     </div>
 
@@ -35,7 +36,11 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        
+        // AJUSTE DE CÂMERA INICIAL (Para não começar embaixo do carro)
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+        camera.position.set(0, 50, 100); // Começa do alto olhando pra baixo
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
@@ -43,37 +48,42 @@
 
         scene.add(new THREE.AmbientLight(0xffffff, 1.8));
         const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-        sun.position.set(10, 50, 10);
+        sun.position.set(50, 100, 50);
         scene.add(sun);
 
         const loader = new GLTFLoader();
         let car, city, startTime = null, finalTime = null;
         let keys = {};
-        
-        // --- LÓGICA DO JOGO ---
         let checkpointAtual = 0;
         let podeAndar = true;
-        let jogoFinalizado = false;
 
         const perguntas = [
             { q: "Qual a cor da placa de regulamentação?", r: ["Vermelha", "Amarela", "Verde"], c: 0 },
-            { q: "O que significa a placa 'PARE'?", r: ["Diminuir", "Parada Obrigatória", "Atenção"], c: 1 },
-            { q: "Preferência na rotatória é de quem?", r: ["Quem vem da direita", "Quem já está nela", "Quem corre mais"], c: 1 },
-            { q: "Ultrapassagem pela direita é permitida?", r: ["Sim, sempre", "Nunca", "Só se o veículo da frente for virar à esquerda"], c: 2 },
-            { q: "Uso do cinto é obrigatório para:", r: ["Só motorista", "Motorista e passageiros", "Só em rodovias"], c: 1 },
-            { q: "Beber e dirigir resulta em:", r: ["Multa leve", "Nada", "Multa gravíssima e suspensão"], c: 2 }
+            { q: "O que significa a placa 'PARE'?", r: ["Atenção", "Parada Obrigatória"], c: 1 },
+            { q: "A preferência na rotatória é de quem?", r: ["Quem vem da direita", "Quem já está nela"], c: 1 },
+            { q: "Beber e dirigir resulta em:", r: ["Multa leve", "Infração Gravíssima"], c: 1 }
         ];
 
-        const distanciasCheckpoints = [100, 250, 400, 600, 800, 1000]; // Metros percorridos
+        // Distâncias onde o carro vai parar para perguntar
+        const distanciasCheckpoints = [150, 400, 700, 1000]; 
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
             scene.add(gltf.scene);
-            loader.load('vending_machine.glb', (gltfM) => {
-                const m = gltfM.scene; m.scale.set(5,5,5); m.position.set(45,0,-30); scene.add(m);
+            
+            loader.load('vending_machine.glb', (gM) => {
+                const m = gM.scene; m.scale.set(5,5,5); m.position.set(45,0,-30); scene.add(m);
             });
-            loader.load('low_poly_ferrari_roma.glb', (gltfC) => {
-                car = gltfC.scene; car.scale.set(6,6,6); car.position.set(0, 0.15, 0); scene.add(car);
-                mostrarMelhorTempo();
+
+            loader.load('low_poly_ferrari_roma.glb', (gC) => {
+                car = gC.scene; 
+                car.scale.set(6, 6, 6); 
+                car.position.set(0, 0.15, 0); 
+                scene.add(car);
+                
+                // Reposiciona a câmera atrás do carro IMEDIATAMENTE
+                const initOffset = new THREE.Vector3(0, 4, -12).applyMatrix4(car.matrixWorld);
+                camera.position.copy(initOffset);
+                camera.lookAt(car.position);
             });
         });
 
@@ -82,13 +92,9 @@
                 checkpointAtual++;
                 podeAndar = true;
                 document.getElementById('quiz-container').style.display = 'none';
-                if(checkpointAtual >= perguntas.length) {
-                    finalizarCorrida();
-                } else {
-                    document.getElementById('status').innerText = "✅ Correto! Siga para o próximo ponto.";
-                }
+                document.getElementById('status').innerText = "✅ CORRETO! ACELERE!";
             } else {
-                alert("❌ Errado! O carro continua travado.");
+                alert("❌ RESPOSTA ERRADA! TENTE NOVAMENTE.");
             }
         }
 
@@ -104,53 +110,35 @@
             document.getElementById('quiz-container').style.display = 'block';
         }
 
-        function finalizarCorrida() {
-            jogoFinalizado = true;
-            podeAndar = false;
-            finalTime = document.getElementById('timer').innerText;
-            document.getElementById('status').innerText = "🏁 CHEGADA! Tempo: " + finalTime;
-            salvarTempo(finalTime);
-        }
-
-        function salvarTempo(tempo) {
-            const melhor = localStorage.getItem('bestTime');
-            if(!melhor || tempo < melhor) {
-                localStorage.setItem('bestTime', tempo);
-                mostrarMelhorTempo();
-            }
-        }
-
-        function mostrarMelhorTempo() {
-            const melhor = localStorage.getItem('bestTime');
-            if(melhor) document.getElementById('rank').innerText = "Melhor Tempo: " + melhor;
-        }
-
         window.onkeydown = (e) => keys[e.code] = true;
         window.onkeyup = (e) => keys[e.code] = false;
 
         function animate() {
             requestAnimationFrame(animate);
-            if (car && podeAndar && !jogoFinalizado) {
-                if(!startTime && (keys['ArrowUp'])) startTime = Date.now();
+            if (car) {
+                if (podeAndar) {
+                    if(!startTime && keys['ArrowUp']) startTime = Date.now();
 
-                const speed = 1.2;
-                if (keys['ArrowUp']) car.translateZ(speed);
-                if (keys['ArrowDown']) car.translateZ(-speed/2);
-                if (keys['ArrowLeft']) car.rotation.y += 0.06;
-                if (keys['ArrowRight']) car.rotation.y -= 0.06;
+                    const speed = 1.2;
+                    if (keys['ArrowUp']) car.translateZ(speed);
+                    if (keys['ArrowDown']) car.translateZ(-speed/2);
+                    if (keys['ArrowLeft']) car.rotation.y += 0.06;
+                    if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-                // Checar distância para o próximo checkpoint
-                let distancia = car.position.length(); 
-                if(checkpointAtual < distanciasCheckpoints.length && distancia > distanciasCheckpoints[checkpointAtual]) {
-                    abrirQuiz();
+                    // Lógica de distância percorrida
+                    let dist = car.position.length();
+                    if(checkpointAtual < distanciasCheckpoints.length && dist > distanciasCheckpoints[checkpointAtual]) {
+                        abrirQuiz();
+                    }
                 }
 
+                // Câmera segue o carro suavemente (ajustada para não entrar no chão)
                 const offset = new THREE.Vector3(0, 4, -12).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
 
-            if(startTime && !jogoFinalizado) {
+            if(startTime && podeAndar) {
                 const delta = Date.now() - startTime;
                 const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
                 const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
