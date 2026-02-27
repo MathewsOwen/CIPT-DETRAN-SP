@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | TABULEIRO 3D</title>
+    <title>DETRAN-SP | CIRCUITO NA RUA</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
@@ -20,7 +20,7 @@
 <body>
 
     <div id="timer">Tempo: 00:00.00</div>
-    <div id="status">🚦 RESPONDA PARA MOVER O CARRO!</div>
+    <div id="status">🚦 AGUARDANDO RESPOSTA...</div>
 
     <div id="quiz-container">
         <h2 id="pergunta-txt" style="color:#333">Pergunta 1</h2>
@@ -49,22 +49,32 @@
         let etapaAtual = 0;
         let emMovimento = false;
 
-        // --- DEFINIÇÃO DO TABULEIRO (DESTINOS PROGRAMADOS) ---
-        // Cada destino tem uma posição (Z) e uma pergunta
+        // --- TABULEIRO PROGRAMADO NA RUA ---
+        // Ajustei os valores de Z para o carro percorrer a avenida
         const destinos = [
-            { z: 50, q: "O que significa a placa 'PARE'?", r: ["Atenção", "Parada Obrigatória"], c: 1 },
-            { z: 120, q: "Qual a cor do sinal para seguir?", r: ["Verde", "Vermelho"], c: 0 },
-            { z: 200, q: "Cinto de segurança é para:", r: ["Só motorista", "Todos no carro"], c: 1 },
-            { z: 300, q: "Final da Prova! Chegou ao destino?", r: ["Sim!", "Não"], c: 0 }
+            { z: -100, q: "Ao ver o sinal amarelo, você deve:", r: ["Acelerar rápido", "Reduzir e parar"], c: 1 },
+            { z: -250, q: "A placa de 'PARE' indica:", r: ["Parada obrigatória", "Diminuir a marcha"], c: 0 },
+            { z: -450, q: "Onde o pedestre deve atravessar?", r: ["Em qualquer lugar", "Na faixa de pedestres"], c: 1 },
+            { z: -600, q: "Parabéns! Você chegou à Autoescola!", r: ["Finalizar Teste", "Dirigir mais"], c: 0 }
         ];
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
             scene.add(gltf.scene);
+            
             loader.load('vending_machine.glb', (gM) => {
-                const m = gM.scene; m.scale.set(5,5,5); m.position.set(45,0,-30); scene.add(m);
+                const m = gM.scene; m.scale.set(5,5,5); 
+                m.position.set(55,0,-30); // Máquina recuada para não bater no carro
+                scene.add(m);
             });
+
             loader.load('low_poly_ferrari_roma.glb', (gC) => {
-                car = gC.scene; car.scale.set(6, 6, 6); car.position.set(0, 0.15, 0);
+                car = gC.scene; 
+                car.scale.set(6, 6, 6); 
+                
+                // --- POSIÇÃO INICIAL NA RUA ---
+                // X: 35 coloca o carro no meio da faixa de rodagem
+                car.position.set(35, 0.15, 0); 
+                
                 scene.add(car);
                 montarPergunta();
             });
@@ -72,7 +82,7 @@
 
         function montarPergunta() {
             if (etapaAtual >= destinos.length) {
-                document.getElementById('status').innerText = "🏁 PARABÉNS! VOCÊ COMPLETOU O CIRCUITO!";
+                document.getElementById('status').innerText = "🏁 TESTE CONCLUÍDO COM SUCESSO!";
                 return;
             }
             emMovimento = false;
@@ -89,11 +99,11 @@
         window.verificar = function(index) {
             if(index === destinos[etapaAtual].c) {
                 document.getElementById('quiz-container').style.display = 'none';
-                document.getElementById('status').innerText = "🚗 ACERTOU! MOVENDO PARA O PRÓXIMO PONTO...";
+                document.getElementById('status').innerText = "🚗 ACERTOU! AVANÇANDO PARA O PRÓXIMO PONTO...";
                 emMovimento = true;
                 if(!startTime) startTime = Date.now();
             } else {
-                alert("❌ Errado! O carro não vai se mexer.");
+                alert("❌ Resposta Incorreta! O carro permanece parado por segurança.");
             }
         }
 
@@ -101,25 +111,24 @@
             requestAnimationFrame(animate);
             if (car) {
                 if (emMovimento) {
-                    // O carro anda sozinho para frente
-                    car.translateZ(0.8); 
+                    // O carro anda em linha reta pela rua
+                    car.translateZ(1.0); 
                     
-                    // Verifica se chegou na distância (Z) do destino atual
-                    if (car.position.z >= destinos[etapaAtual].z) {
+                    // Checa se atingiu o próximo ponto (usando valor absoluto para o eixo Z)
+                    if (Math.abs(car.position.z) >= Math.abs(destinos[etapaAtual].z)) {
+                        emMovimento = false;
                         etapaAtual++;
-                        montarPergunta();
+                        setTimeout(montarPergunta, 500); // Pequena pausa antes da próxima
                     }
                 }
 
-                // Câmera segue o carro
-                const offset = new THREE.Vector3(0, 4, -12).applyMatrix4(car.matrixWorld);
+                // Câmera dinâmica seguindo o trajeto
+                const offset = new THREE.Vector3(0, 5, -15).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
 
-            if(startTime && !emMovimento && etapaAtual >= destinos.length) {
-                // Para o cronômetro no final
-            } else if (startTime) {
+            if(startTime && emMovimento) {
                 const delta = Date.now() - startTime;
                 const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
                 const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
