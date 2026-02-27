@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | SENTIDO CORRETO</title>
+    <title>DETRAN-SP | CIRCUITO CURTO</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
@@ -19,10 +19,10 @@
 <body>
 
     <div id="timer">Tempo: 00:00.00</div>
-    <div id="status">🚥 ALINHANDO COM A AVENIDA...</div>
+    <div id="status">🚥 ALINHANDO NA RUA...</div>
 
     <div id="quiz-container">
-        <h2 id="pergunta-txt" style="color:#333">Carregando Prova...</h2>
+        <h2 id="pergunta-txt" style="color:#333">Carregando...</h2>
         <div id="opcoes"></div>
     </div>
 
@@ -39,7 +39,7 @@
         document.body.appendChild(renderer.domElement);
 
         scene.add(new THREE.AmbientLight(0xffffff, 2.0));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
         sun.position.set(50, 100, 50);
         scene.add(sun);
 
@@ -48,34 +48,27 @@
         let etapaAtual = 0;
         let emMovimento = false;
 
-        // --- DESTINOS NO EIXO X (Sentido da Avenida do Caminhão) ---
+        // --- CIRCUITO CURTO (X) ---
+        // Diminuí os valores para as paradas serem mais próximas
         const destinos = [
-            { x: -150, q: "O sinal amarelo significa:", r: ["Acelerar", "Atenção/Parar"], c: 1 },
-            { x: -350, q: "Placa de 'PARE' é:", r: ["Obrigatória", "Opcional"], c: 0 },
-            { x: -600, q: "Cinto de segurança é obrigatório?", r: ["Sim", "Não"], c: 0 },
-            { x: -900, q: "Final do Teste! Parabéns!", r: ["Concluir", "Reiniciar"], c: 0 }
+            { x: -50, q: "O sinal vermelho serve para:", r: ["Parar", "Acelerar"], c: 0 },
+            { x: -120, q: "Pode estacionar na frente de guia rebaixada?", r: ["Sim", "Não"], c: 1 },
+            { x: -200, q: "Final do mini teste!", r: ["Sair", "Reiniciar"], c: 0 }
         ];
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
             scene.add(gltf.scene);
             
-            loader.load('vending_machine.glb', (gM) => {
-                const m = gM.scene; m.scale.set(5,5,5); 
-                m.position.set(-50, 0, -60); // Máquina perto da lanchonete na avenida
-                scene.add(m);
-            });
-
             loader.load('low_poly_ferrari_roma.glb', (gC) => {
                 car = gC.scene; 
                 car.scale.set(6, 6, 6); 
                 
-                // --- POSIÇÃO INICIAL ---
-                // Começa no zero, mas na pista lateral (Z = -50)
-                car.position.set(0, 0.15, -50); 
+                // --- AJUSTE DE RUA ---
+                // Mudei o Z para 35 para o carro ficar no asfalto da avenida lateral
+                // Se ele ainda bater em algo, teste mudar esse 35 para 0 ou -35
+                car.position.set(50, 0.15, 35); 
                 
-                // GIRA 90 GRAUS para alinhar com a rua (pode ser Math.PI/2 ou -Math.PI/2)
                 car.rotation.y = -Math.PI / 2; 
-                
                 scene.add(car);
                 montarPergunta();
             });
@@ -97,11 +90,11 @@
         window.verificar = function(index) {
             if(index === destinos[etapaAtual].c) {
                 document.getElementById('quiz-container').style.display = 'none';
-                document.getElementById('status').innerText = "🚗 ACERTOU! SEGUINDO PELA AVENIDA...";
+                document.getElementById('status').innerText = "🚗 ACERTOU! MOVENDO...";
                 emMovimento = true;
                 if(!startTime) startTime = Date.now();
             } else {
-                alert("❌ Errado! Responda corretamente.");
+                alert("❌ Errado!");
             }
         }
 
@@ -109,29 +102,22 @@
             requestAnimationFrame(animate);
             if (car) {
                 if (emMovimento) {
-                    // MOVE NO EIXO X (Sentido da rua do caminhão)
                     car.position.x -= 1.0; 
-                    
-                    // Checa destino no X
                     if (car.position.x <= destinos[etapaAtual].x) {
                         emMovimento = false;
                         etapaAtual++;
                         setTimeout(montarPergunta, 500);
                     }
                 }
-
-                const offset = new THREE.Vector3(18, 6, 0).applyMatrix4(car.matrixWorld);
+                // Câmera posicionada para ver a rua e o carro de lado/trás
+                const offset = new THREE.Vector3(15, 5, 0).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
-
             if(startTime && emMovimento) {
                 const delta = Date.now() - startTime;
-                const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
-                const ms = Math.floor((delta % 1000) / 10).toString().padStart(2, '0');
-                document.getElementById('timer').innerText = `Tempo: ${secs}.${ms}`;
+                document.getElementById('timer').innerText = `Tempo: ${Math.floor(delta/1000)}s`;
             }
-
             renderer.render(scene, camera);
         }
         animate();
