@@ -2,55 +2,73 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | CIRCUITO COM RANKING</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DETRAN-SP | Simulador de Exame Pro</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
+        :root { --primary: #ed1c24; --dark: #1a1a1a; --glass: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; }
         
-        /* Telas de Interface */
-        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3000; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        #ranking-container { position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 15px; border-radius: 10px; border: 1px solid #ed1c24; z-index: 100; min-width: 150px; font-size: 14px; }
-        
-        #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
-        
-        #quiz-container { 
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: white; padding: 30px; border-radius: 20px; border: 5px solid #ed1c24;
-            text-align: center; z-index: 2000; display: none; width: 350px; box-shadow: 0 0 100px rgba(0,0,0,0.8);
-        }
+        /* Loading Screen */
+        #loading-screen { position: fixed; inset: 0; background: var(--dark); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: 0.5s; }
+        .loader { width: 200px; height: 4px; background: #333; border-radius: 2px; margin-top: 20px; overflow: hidden; }
+        .loader-bar { width: 0%; height: 100%; background: var(--primary); transition: 0.3s; }
 
-        input { padding: 12px; font-size: 18px; border-radius: 8px; border: none; margin-bottom: 20px; width: 250px; text-align: center; }
-        button { padding: 12px 30px; font-size: 18px; cursor: pointer; background: #ed1c24; color: white; border: none; border-radius: 8px; font-weight: bold; }
+        /* Modern UI Elements */
+        #timer { position: absolute; top: 20px; left: 20px; font-size: 22px; color: white; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 12px 20px; border-radius: 50px; border: 1px solid var(--glass); z-index: 100; font-variant-numeric: tabular-nums; }
         
-        .btn-resp { display: block; width: 100%; margin: 10px 0; padding: 12px; font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc; background: #f9f9f9; color: #333; font-weight: bold; }
-        .btn-resp:hover { background: #ed1c24; color: white; }
+        #ranking-container { position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); color: white; padding: 20px; border-radius: 15px; border: 1px solid var(--glass); z-index: 100; min-width: 200px; }
         
-        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.9); padding: 15px; font-weight: bold; z-index: 100; font-size: 18px; }
-        table { width: 100%; margin-top: 10px; border-collapse: collapse; }
-        th { border-bottom: 1px solid #ed1c24; text-align: left; }
+        #ui-layer { position: fixed; inset: 0; z-index: 4000; background: radial-gradient(circle, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
+        
+        /* Professional Forms */
+        .glass-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(15px); padding: 40px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        input { background: rgba(255,255,255,0.1); border: 1px solid #444; padding: 15px; border-radius: 10px; color: white; font-size: 18px; width: 280px; margin: 20px 0; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(237, 28, 36, 0.3); }
+        
+        .main-btn { background: var(--primary); color: white; border: none; padding: 15px 40px; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
+        .main-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(237, 28, 36, 0.4); }
+
+        /* Quiz Styling */
+        #quiz-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 20px; width: 400px; display: none; z-index: 3000; box-shadow: 0 0 100px rgba(0,0,0,0.5); border-bottom: 8px solid var(--primary); }
+        .btn-resp { display: block; width: 100%; margin: 12px 0; padding: 15px; font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #eee; background: #f8f9fa; font-weight: 600; color: #333; transition: 0.2s; }
+        .btn-resp:hover { background: #f0f0f0; border-color: var(--primary); color: var(--primary); }
+
+        #status-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 8px 25px; border-radius: 50px; font-size: 14px; z-index: 100; letter-spacing: 1px; }
+        table { width: 100%; margin-top: 15px; border-spacing: 0 8px; }
+        th { color: #888; font-size: 12px; text-transform: uppercase; text-align: left; }
+        td { padding: 5px 0; font-weight: 500; }
     </style>
 </head>
 <body>
 
+    <div id="loading-screen">
+        <h2 style="letter-spacing: 5px;">CARREGANDO SISTEMA</h2>
+        <div class="loader"><div class="loader-bar" id="l-bar"></div></div>
+    </div>
+
     <div id="ui-layer">
-        <h1 style="color:#ed1c24">DETRAN-SP</h1>
-        <p>Insira seu nome para começar o exame:</p>
-        <input type="text" id="playerName" placeholder="Nome do Motorista" maxlength="15">
-        <button onclick="iniciarProva()">INICIAR TESTE</button>
+        <div class="glass-card">
+            <h1 style="margin:0; font-size: 42px;">DETRAN<span style="color:var(--primary)">SP</span></h1>
+            <p style="opacity: 0.7;">SIMULADOR OFICIAL DE EXAME PRÁTICO</p>
+            <input type="text" id="playerName" placeholder="Nome Completo do Aluno" maxlength="20">
+            <br>
+            <button class="main-btn" onclick="iniciarProva()">Iniciar Exame</button>
+        </div>
     </div>
 
     <div id="ranking-container">
-        <strong>🏆 RANKING (Segundos)</strong>
+        <strong style="display:block; margin-bottom:10px; border-left: 3px solid var(--primary); padding-left: 10px;">MELHORES ALUNOS</strong>
         <table id="rankingTable">
-            <thead><tr><th>Nome</th><th>Tempo</th></tr></thead>
+            <thead><tr><th>Motorista</th><th>Tempo</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
 
-    <div id="timer">Tempo: 00s</div>
-    <div id="status">🚥 AGUARDANDO IDENTIFICAÇÃO...</div>
+    <div id="timer">00:00.0s</div>
+    <div id="status-bar">SISTEMA ONLINE</div>
 
     <div id="quiz-container">
-        <h2 id="pergunta-txt" style="color:#333">Pergunta</h2>
+        <h3 id="pergunta-txt" style="margin-top:0; color:var(--dark)">Pergunta</h3>
         <div id="opcoes"></div>
     </div>
 
@@ -58,144 +76,174 @@
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputEncoding = THREE.sRGBEncoding;
-        document.body.appendChild(renderer.domElement);
-
-        scene.add(new THREE.AmbientLight(0xffffff, 2.5));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(50, 100, 50);
-        scene.add(sun);
-
-        const loader = new GLTFLoader();
-        let car, startTime = null, totalTime = 0;
-        let etapaAtual = 0;
-        let emMovimento = false;
-        let motorista = "";
-
+        let scene, camera, renderer, car, motorista = "";
+        let startTime = null, etapaAtual = 0, emMovimento = false;
+        
+        // --- CONFIGURAÇÃO DE ROTA (Otimizada) ---
         const rota = [
-            { x: -114, z: 224, pausa: false }, 
-            { x: -50,  z: 224, pausa: true,  q: "Qual a cor que indica 'Pare'?", r: ["Vermelho", "Verde"], c: 0 },
-            { x: 30,   z: 224, pausa: true,  q: "Cinto de segurança é obrigatório?", r: ["Sim", "Não"], c: 0 },
-            { x: 100,  z: 224, pausa: true,  q: "Sinal vermelho pode passar?", r: ["Não", "Sim"], c: 0 },
-            { x: 165,  z: 224, pausa: false }, 
-            { x: 165,  z: 110, pausa: true,  q: "Celular ao dirigir?", r: ["Proibido", "Permitido"], c: 0 },
-            { x: 165,  z: 60,  pausa: true,  q: "Prioridade do pedestre?", r: ["Sim", "Não"], c: 0 },
-            { x: 165,  z: 10,  pausa: true,  q: "Fim da Prova! Salvar tempo?", r: ["Sim", "Não"], c: 0, final: true }
+            { x: -114, z: 224, p: false }, 
+            { x: -50,  z: 224, p: true,  q: "Qual a cor que indica 'PARE' obrigatório?", r: ["Vermelho", "Verde"], c: 0 },
+            { x: 30,   z: 224, p: true,  q: "O uso do cinto é obrigatório para passageiros no banco de trás?", r: ["Sim", "Não"], c: 0 },
+            { x: 100,  z: 224, p: true,  q: "Avançar o sinal vermelho resulta em qual tipo de infração?", r: ["Média", "Gravíssima"], c: 1 },
+            { x: 165,  z: 224, p: false }, // Curva limpa
+            { x: 165,  z: 110, p: true,  q: "O uso de celular ao dirigir é permitido com fone de ouvido?", r: ["Proibido", "Permitido"], c: 0 },
+            { x: 165,  z: 60,  p: true,  q: "Quem tem a prioridade em uma faixa de pedestres sem semáforo?", r: ["O Veículo", "O Pedestre"], c: 1 },
+            { x: 165,  z: 10,  p: true,  q: "Exame finalizado! Deseja registrar seu desempenho?", r: ["Registrar e Sair", "Reiniciar"], c: 0, final: true }
         ];
 
-        // --- FUNÇÕES DE RANKING ---
-        window.atualizarRankingDisplay = function() {
-            const data = JSON.parse(localStorage.getItem('detranRanking') || '[]');
-            const tbody = document.querySelector('#rankingTable tbody');
-            tbody.innerHTML = "";
-            data.sort((a,b) => a.tempo - b.tempo).slice(0, 5).forEach(item => {
-                tbody.innerHTML += `<tr><td>${item.nome}</td><td>${item.tempo}s</td></tr>`;
-            });
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            
+            // Nevoeiro para dar profundidade profissional
+            scene.fog = new THREE.Fog(0x87CEEB, 200, 1000);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.shadowMap.enabled = true; // Habilita sombras
+            document.body.appendChild(renderer.domElement);
+
+            // Luzes Profissionais
+            const ambient = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+            scene.add(ambient);
+            
+            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+            sun.position.set(100, 200, 100);
+            sun.castShadow = true;
+            scene.add(sun);
+
+            carregarModelos();
         }
 
-        window.salvarNoRanking = function(nome, tempo) {
-            const data = JSON.parse(localStorage.getItem('detranRanking') || '[]');
-            data.push({ nome, tempo });
-            localStorage.setItem('detranRanking', JSON.stringify(data));
-            atualizarRankingDisplay();
+        function carregarModelos() {
+            const loader = new GLTFLoader();
+            const bar = document.getElementById('l-bar');
+
+            // Carregar Mapa
+            loader.load('city_-_cidade (2).glb', (gltf) => {
+                gltf.scene.traverse(obj => {
+                    if(obj.isMesh) obj.receiveShadow = true;
+                    if(["fence", "barricade", "cone", "mureta", "machine", "soda"].some(n => obj.name.toLowerCase().includes(n))) obj.visible = false;
+                });
+                scene.add(gltf.scene);
+                bar.style.width = "50%";
+
+                // Carregar Ferrari
+                loader.load('low_poly_ferrari_roma.glb', (gC) => {
+                    car = gC.scene;
+                    car.scale.set(6, 6, 6);
+                    car.position.set(rota[0].x, 0.15, rota[0].z);
+                    car.traverse(c => { if(c.isMesh) c.castShadow = true; });
+                    scene.add(car);
+                    
+                    bar.style.width = "100%";
+                    setTimeout(() => { document.getElementById('loading-screen').style.opacity = '0'; 
+                    setTimeout(() => document.getElementById('loading-screen').remove(), 500); }, 500);
+                });
+            });
         }
 
         window.iniciarProva = function() {
             const input = document.getElementById('playerName');
-            if(input.value.trim() === "") return alert("Digite seu nome!");
+            if(input.value.length < 3) return alert("Por favor, insira o nome completo do aluno.");
             motorista = input.value;
             document.getElementById('ui-layer').style.display = 'none';
-            document.getElementById('status').innerText = `🚗 MOTORISTA: ${motorista.toUpperCase()}`;
+            document.getElementById('status-bar').innerText = `MODO EXAME: ATIVO | ALUNO: ${motorista.toUpperCase()}`;
             emMovimento = true;
             startTime = Date.now();
         }
 
-        // --- CARREGAMENTO ---
-        loader.load('city_-_cidade (2).glb', (gltf) => {
-            const cidade = gltf.scene;
-            cidade.traverse((obj) => {
-                if (["fence", "barricade", "cone", "mureta", "barrier"].some(n => obj.name.toLowerCase().includes(n))) obj.visible = false;
-            });
-            scene.add(cidade);
-            
-            loader.load('low_poly_ferrari_roma.glb', (gC) => {
-                car = gC.scene; 
-                car.scale.set(6, 6, 6); 
-                car.position.set(rota[0].x, 0.15, rota[0].z);
-                scene.add(car);
-            });
-        });
+        window.verificar = function(idx) {
+            const p = rota[etapaAtual];
+            if(idx === p.c) {
+                document.getElementById('quiz-container').style.display = 'none';
+                if(p.final) {
+                    const total = ((Date.now() - startTime) / 1000).toFixed(1);
+                    salvarRanking(motorista, total);
+                    location.reload();
+                } else { etapaAtual++; emMovimento = true; }
+            } else { alert("Infração cometida! Resposta incorreta."); }
+        }
 
-        function montarPergunta() {
+        function montarQuiz() {
             const p = rota[etapaAtual];
             document.getElementById('pergunta-txt').innerText = p.q;
-            const container = document.getElementById('opcoes');
-            container.innerHTML = "";
-            p.r.forEach((txt, i) => {
-                const btn = document.createElement('button');
-                btn.className = 'btn-resp';
-                btn.innerText = txt;
-                btn.onclick = () => verificar(i);
-                container.appendChild(btn);
+            const ops = document.getElementById('opcoes');
+            ops.innerHTML = "";
+            p.r.forEach((t, i) => {
+                const b = document.createElement('button');
+                b.className = 'btn-resp';
+                b.innerText = t;
+                b.onclick = () => verificar(i);
+                ops.appendChild(b);
             });
             document.getElementById('quiz-container').style.display = 'block';
         }
 
-        window.verificar = function(index) {
-            const p = rota[etapaAtual];
-            if(index === p.c) {
-                document.getElementById('quiz-container').style.display = 'none';
-                if(p.final) {
-                    totalTime = Math.floor((Date.now() - startTime) / 1000);
-                    salvarNoRanking(motorista, totalTime);
-                    alert(`PARABÉNS ${motorista}! Seu tempo foi de ${totalTime} segundos.`);
-                    location.reload(); // Reinicia
-                } else {
-                    etapaAtual++;
-                    emMovimento = true;
-                }
-            } else { alert("Resposta Errada!"); }
+        function salvarRanking(n, t) {
+            let d = JSON.parse(localStorage.getItem('detranRanking') || '[]');
+            d.push({ nome: n, tempo: parseFloat(t) });
+            localStorage.setItem('detranRanking', JSON.stringify(d));
+        }
+
+        function updateRanking() {
+            const d = JSON.parse(localStorage.getItem('detranRanking') || '[]');
+            const b = document.querySelector('#rankingTable tbody');
+            b.innerHTML = "";
+            d.sort((x,y) => x.tempo - y.tempo).slice(0, 5).forEach(i => {
+                b.innerHTML += `<tr><td>${i.nome}</td><td>${i.tempo}s</td></tr>`;
+            });
         }
 
         function animate() {
             requestAnimationFrame(animate);
             if (car && emMovimento && etapaAtual < rota.length) {
-                const destino = rota[etapaAtual];
-                car.position.x += (destino.x - car.position.x) * 0.05;
-                car.position.z += (destino.z - car.position.z) * 0.05;
-
-                const dx = destino.x - car.position.x;
-                const dz = destino.z - car.position.z;
+                const dest = rota[etapaAtual];
                 
+                // Suavização Profissional (Ease-out)
+                car.position.x += (dest.x - car.position.x) * 0.04;
+                car.position.z += (dest.z - car.position.z) * 0.04;
+
+                const dx = dest.x - car.position.x;
+                const dz = dest.z - car.position.z;
+
                 if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
-                    const anguloAlvo = Math.atan2(dx, dz);
-                    let diff = anguloAlvo - car.rotation.y;
+                    const angle = Math.atan2(dx, dz);
+                    let diff = angle - car.rotation.y;
                     while (diff < -Math.PI) diff += Math.PI * 2;
                     while (diff > Math.PI) diff -= Math.PI * 2;
-                    car.rotation.y += diff * 0.1;
+                    car.rotation.y += diff * 0.08;
                 }
 
                 if (Math.abs(dx) < 0.3 && Math.abs(dz) < 0.3) {
-                    if (destino.pausa) { emMovimento = false; montarPergunta(); } else { etapaAtual++; }
+                    if (dest.p) { emMovimento = false; montarQuiz(); } else { etapaAtual++; }
                 }
 
-                const offset = new THREE.Vector3(-22, 6, 0).applyMatrix4(car.matrixWorld);
+                // Câmera Cinema (+50% Zoom conforme solicitado)
+                const offset = new THREE.Vector3(-22, 7, 0).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
-                camera.lookAt(car.position);
+                camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
             }
+            
             if(startTime && emMovimento) {
-                const delta = Math.floor((Date.now() - startTime) / 1000);
-                document.getElementById('timer').innerText = `Tempo: ${delta}s`;
+                const sec = ((Date.now() - startTime) / 1000).toFixed(1);
+                document.getElementById('timer').innerText = `⏱️ ${sec}s`;
             }
+            
             renderer.render(scene, camera);
         }
-        atualizarRankingDisplay();
+
+        init();
+        updateRanking();
         animate();
+
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
     </script>
 </body>
 </html>
