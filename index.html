@@ -1,83 +1,32 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DETRAN-SP | Simulador Pro</title>
-    <style>
-        :root { --primary: #ed1c24; --accent-blue: #00bfff; --dark: #000; }
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
+<style>
+    :root { 
+        --primary: #ed1c24; 
+        --accent-blue: #0055ff; /* AZUL MAIS ESCURO E OFICIAL */
+        --dark: #000; 
+    }
+    
+    /* ... (restante do CSS igual) ... */
 
-        /* --- ESTILO DO SLIDE DE INTRO (LOGO) --- */
-        #intro-overlay {
-            position: fixed; inset: 0; background: #000; z-index: 6000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1s ease-in-out;
-        }
+    .sp-color { 
+        color: var(--accent-blue); 
+        text-shadow: 0 0 20px rgba(0, 85, 255, 0.6); /* Brilho combinando */
+        font-weight: 900;
+    }
 
-        .logo-container {
-            position: relative; overflow: hidden; padding: 20px;
-            animation: fadeIn 1.5s ease-out;
-            text-align: center;
-        }
+    /* Estilo do Logo no Menu também atualizado */
+    .menu-logo-sp {
+        color: var(--accent-blue);
+    }
+</style>
 
-        /* Efeito de brilho passando pelo logo */
-        .logo-container::after {
-            content: ''; position: absolute; top: 0; left: -150%;
-            width: 50%; height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
-            transform: skewX(-25deg);
-            animation: shine 2.5s infinite;
-        }
-
-        .sp-color { color: var(--accent-blue); text-shadow: 0 0 15px rgba(0, 191, 255, 0.4); }
-
-        @keyframes shine {
-            0% { left: -150%; }
-            100% { left: 150%; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .intro-text {
-            color: white; margin-top: 20px; letter-spacing: 4px;
-            font-size: 14px; opacity: 0.6; text-transform: uppercase;
-        }
-
-        /* --- RESTANTE DA INTERFACE (PROFISSIONAL) --- */
-        #loading-screen { position: fixed; inset: 0; background: #111; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .loader { width: 220px; height: 3px; background: #222; border-radius: 5px; margin-top: 20px; overflow: hidden; }
-        .loader-bar { width: 0%; height: 100%; background: var(--primary); transition: 0.4s; }
-
-        #ui-layer { position: fixed; inset: 0; z-index: 4000; background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,1) 100%); display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
-        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); padding: 50px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        
-        input { background: rgba(255,255,255,0.08); border: 1px solid #333; padding: 18px; border-radius: 12px; color: white; font-size: 18px; width: 300px; margin: 25px 0; outline: none; text-align: center; transition: 0.3s; }
-        input:focus { border-color: var(--accent-blue); box-shadow: 0 0 15px rgba(0, 191, 255, 0.2); }
-        
-        .main-btn { background: var(--primary); color: white; border: none; padding: 18px 50px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; }
-        .main-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(237, 28, 36, 0.4); background: #ff2a33; }
-        
-        #timer { position: absolute; top: 25px; left: 25px; font-size: 24px; color: white; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 15px 25px; border-radius: 50px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); font-weight: bold; }
-        #quiz-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 45px; border-radius: 25px; width: 420px; display: none; z-index: 3000; box-shadow: 0 0 120px rgba(0,0,0,0.6); border-bottom: 10px solid var(--primary); }
-        .btn-resp { display: block; width: 100%; margin: 15px 0; padding: 18px; font-size: 17px; cursor: pointer; border-radius: 12px; border: 1px solid #eee; background: #fcfcfc; font-weight: 600; color: #333; transition: 0.2s; }
-        .btn-resp:hover { background: #f0f0f0; border-color: var(--primary); color: var(--primary); }
-    </style>
-</head>
 <body>
-
     <div id="intro-overlay">
         <div class="logo-container">
-            <h1 style="color:white; font-size: 65px; margin:0; font-weight: 900; letter-spacing: -2px;">DETRAN<span class="sp-color">SP</span></h1>
+            <h1 style="color:white; font-size: 65px; margin:0; font-weight: 900; letter-spacing: -2px; font-family: sans-serif;">
+                DETRAN<span class="sp-color">SP</span>
+            </h1>
         </div>
         <div class="intro-text">Simulador Digital de Avaliação</div>
-    </div>
-
-    <div id="loading-screen">
-        <div class="loader"><div class="loader-bar" id="l-bar"></div></div>
     </div>
 
     <div id="ui-layer">
@@ -89,150 +38,3 @@
             <button class="main-btn" onclick="iniciarProva()">Entrar no Veículo</button>
         </div>
     </div>
-
-    <div id="timer">00:00.0s</div>
-    <div id="quiz-container">
-        <h3 id="pergunta-txt" style="color:#222; font-size: 22px; margin-bottom: 25px;">Pergunta</h3>
-        <div id="opcoes"></div>
-    </div>
-
-    <script type="module">
-        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
-        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
-
-        let scene, camera, renderer, car, motorista = "";
-        let startTime = null, etapaAtual = 0, emMovimento = false;
-        
-        // Rota oficial ajustada
-        const rota = [
-            { x: -114, z: 224, p: false }, 
-            { x: -50,  z: 224, p: true,  q: "Qual cor indica PARE no semáforo?", r: ["Vermelho", "Amarelo"], c: 0 },
-            { x: 30,   z: 224, p: true,  q: "Cinto é obrigatório para todos?", r: ["Sim", "Não"], c: 0 },
-            { x: 100,  z: 224, p: true,  q: "Avançar sinal vermelho é infração?", r: ["Gravíssima", "Grave"], c: 0 },
-            { x: 165,  z: 224, p: false }, 
-            { x: 165,  z: 110, p: true,  q: "Pode usar celular ao volante?", r: ["Proibido", "Só no viva-voz"], c: 0 },
-            { x: 165,  z: 10,  p: true,  q: "Exame finalizado com sucesso!", r: ["Concluir Prova", "Reiniciar"], c: 0, final: true }
-        ];
-
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const intro = document.getElementById('intro-overlay');
-                intro.style.opacity = '0';
-                setTimeout(() => intro.remove(), 1000);
-            }, 3500);
-        });
-
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.outputEncoding = THREE.sRGBEncoding;
-            document.body.appendChild(renderer.domElement);
-
-            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.8));
-            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-            sun.position.set(100, 200, 100);
-            scene.add(sun);
-
-            carregarModelos();
-        }
-
-        function carregarModelos() {
-            const loader = new GLTFLoader();
-            const bar = document.getElementById('l-bar');
-
-            loader.load('city_-_cidade (2).glb', (gltf) => {
-                gltf.scene.traverse(obj => {
-                    if(["fence", "barricade", "cone", "mureta", "machine", "soda"].some(n => obj.name.toLowerCase().includes(n))) obj.visible = false;
-                });
-                scene.add(gltf.scene);
-                bar.style.width = "60%";
-
-                loader.load('low_poly_ferrari_roma.glb', (gC) => {
-                    car = gC.scene;
-                    car.scale.set(6, 6, 6);
-                    car.position.set(rota[0].x, 0.15, rota[0].z);
-                    scene.add(car);
-                    bar.style.width = "100%";
-                    setTimeout(() => {
-                        document.getElementById('loading-screen').style.display = 'none';
-                        document.getElementById('ui-layer').style.display = 'flex';
-                    }, 800);
-                });
-            });
-        }
-
-        window.iniciarProva = function() {
-            const input = document.getElementById('playerName');
-            if(input.value.length < 3) return alert("Por favor, informe seu nome.");
-            
-            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-
-            motorista = input.value;
-            document.getElementById('ui-layer').style.display = 'none';
-            emMovimento = true;
-            startTime = Date.now();
-        }
-
-        window.verificar = function(idx) {
-            const p = rota[etapaAtual];
-            if(idx === p.c) {
-                document.getElementById('quiz-container').style.display = 'none';
-                if(p.final) { location.reload(); } else { etapaAtual++; emMovimento = true; }
-            } else { alert("Infração detectada!"); }
-        }
-
-        function montarQuiz() {
-            const p = rota[etapaAtual];
-            document.getElementById('pergunta-txt').innerText = p.q;
-            const ops = document.getElementById('opcoes');
-            ops.innerHTML = "";
-            p.r.forEach((t, i) => {
-                const b = document.createElement('button');
-                b.className = 'btn-resp';
-                b.innerText = t;
-                b.onclick = () => verificar(i);
-                ops.appendChild(b);
-            });
-            document.getElementById('quiz-container').style.display = 'block';
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if (car && emMovimento) {
-                const dest = rota[etapaAtual];
-                car.position.x += (dest.x - car.position.x) * 0.05;
-                car.position.z += (dest.z - car.position.z) * 0.05;
-                
-                const dx = dest.x - car.position.x;
-                const dz = dest.z - car.position.z;
-
-                if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
-                    const angle = Math.atan2(dx, dz);
-                    let diff = angle - car.rotation.y;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    car.rotation.y += diff * 0.08;
-                }
-
-                if (Math.abs(dx) < 0.3 && Math.abs(dz) < 0.3) {
-                    if (dest.p) { emMovimento = false; montarQuiz(); } else { etapaAtual++; }
-                }
-
-                const offset = new THREE.Vector3(-22, 7, 0).applyMatrix4(car.matrixWorld);
-                camera.position.lerp(offset, 0.1);
-                camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
-            }
-            if(startTime && emMovimento) {
-                document.getElementById('timer').innerText = `⏱️ ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
-            }
-            renderer.render(scene, camera);
-        }
-
-        init();
-        animate();
-    </script>
-</body>
-</html>
