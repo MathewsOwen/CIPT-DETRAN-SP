@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | CIRCUITO FECHADO</title>
+    <title>DETRAN-SP | TABULEIRO 3D</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
@@ -10,7 +10,7 @@
         #quiz-container { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 30px; border-radius: 20px; border: 5px solid #ed1c24;
-            text-align: center; z-index: 2000; display: none; width: 400px; box-shadow: 0 0 100px rgba(0,0,0,0.8);
+            text-align: center; z-index: 2000; display: block; width: 400px; box-shadow: 0 0 100px rgba(0,0,0,0.8);
         }
         .btn-resp { display: block; width: 100%; margin: 10px 0; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc; background: #f9f9f9; font-weight: bold; }
         .btn-resp:hover { background: #ed1c24; color: white; }
@@ -20,10 +20,10 @@
 <body>
 
     <div id="timer">Tempo: 00:00.00</div>
-    <div id="status">🚦 AGUARDANDO INÍCIO...</div>
+    <div id="status">🚦 RESPONDA PARA MOVER O CARRO!</div>
 
     <div id="quiz-container">
-        <h2 id="pergunta-txt" style="color:#333">Pergunta</h2>
+        <h2 id="pergunta-txt" style="color:#333">Pergunta 1</h2>
         <div id="opcoes"></div>
     </div>
 
@@ -33,11 +33,7 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        
-        // CÂMERA JÁ POSICIONADA NO LUGAR CERTO
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        camera.position.set(0, 5, -15); 
-
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
@@ -49,88 +45,81 @@
         scene.add(sun);
 
         const loader = new GLTFLoader();
-        let car, city, startTime = null;
-        let keys = {};
-        let checkpointAtual = 0;
-        let podeAndar = true;
+        let car, startTime = null;
+        let etapaAtual = 0;
+        let emMovimento = false;
 
-        const perguntas = [
-            { q: "Qual a cor da placa de regulamentação?", r: ["Vermelha", "Amarela"], c: 0 },
-            { q: "O sinal AMARELO significa:", r: ["Acelerar", "Atenção / Parar"], c: 1 },
-            { q: "O pedestre tem preferência?", r: ["Sempre", "Nunca"], c: 0 },
-            { q: "Pode usar celular dirigindo?", r: ["Não", "Sim"], c: 0 }
+        // --- DEFINIÇÃO DO TABULEIRO (DESTINOS PROGRAMADOS) ---
+        // Cada destino tem uma posição (Z) e uma pergunta
+        const destinos = [
+            { z: 50, q: "O que significa a placa 'PARE'?", r: ["Atenção", "Parada Obrigatória"], c: 1 },
+            { z: 120, q: "Qual a cor do sinal para seguir?", r: ["Verde", "Vermelho"], c: 0 },
+            { z: 200, q: "Cinto de segurança é para:", r: ["Só motorista", "Todos no carro"], c: 1 },
+            { z: 300, q: "Final da Prova! Chegou ao destino?", r: ["Sim!", "Não"], c: 0 }
         ];
-
-        // Distâncias fixas do trajeto
-        const distanciasCheckpoints = [100, 250, 450, 700]; 
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
             scene.add(gltf.scene);
-            
             loader.load('vending_machine.glb', (gM) => {
                 const m = gM.scene; m.scale.set(5,5,5); m.position.set(45,0,-30); scene.add(m);
             });
-
             loader.load('low_poly_ferrari_roma.glb', (gC) => {
-                car = gC.scene; 
-                car.scale.set(6, 6, 6); 
-                car.position.set(0, 0.15, 0); 
+                car = gC.scene; car.scale.set(6, 6, 6); car.position.set(0, 0.15, 0);
                 scene.add(car);
-                document.getElementById('status').innerText = "🏁 ACELERE (SETA PARA CIMA) PARA COMEÇAR!";
+                montarPergunta();
             });
         });
 
-        window.verificarResposta = function(index) {
-            if(index === perguntas[checkpointAtual].c) {
-                checkpointAtual++;
-                podeAndar = true;
-                document.getElementById('quiz-container').style.display = 'none';
-                document.getElementById('status').innerText = "✅ CORRETO! SIGA EM FRENTE.";
-            } else {
-                alert("❌ RESPOSTA ERRADA! TENTE NOVAMENTE.");
+        function montarPergunta() {
+            if (etapaAtual >= destinos.length) {
+                document.getElementById('status').innerText = "🏁 PARABÉNS! VOCÊ COMPLETOU O CIRCUITO!";
+                return;
             }
-        }
-
-        function abrirQuiz() {
-            podeAndar = false;
-            keys = {}; // Limpa as teclas para o carro parar na hora
-            const q = perguntas[checkpointAtual];
+            emMovimento = false;
+            const q = destinos[etapaAtual];
             document.getElementById('pergunta-txt').innerText = q.q;
             const container = document.getElementById('opcoes');
             container.innerHTML = "";
             q.r.forEach((txt, i) => {
-                container.innerHTML += `<button class="btn-resp" onclick="verificarResposta(${i})">${txt}</button>`;
+                container.innerHTML += `<button class="btn-resp" onclick="verificar(${i})">${txt}</button>`;
             });
             document.getElementById('quiz-container').style.display = 'block';
         }
 
-        window.onkeydown = (e) => { if(podeAndar) keys[e.code] = true; };
-        window.onkeyup = (e) => keys[e.code] = false;
+        window.verificar = function(index) {
+            if(index === destinos[etapaAtual].c) {
+                document.getElementById('quiz-container').style.display = 'none';
+                document.getElementById('status').innerText = "🚗 ACERTOU! MOVENDO PARA O PRÓXIMO PONTO...";
+                emMovimento = true;
+                if(!startTime) startTime = Date.now();
+            } else {
+                alert("❌ Errado! O carro não vai se mexer.");
+            }
+        }
 
         function animate() {
             requestAnimationFrame(animate);
             if (car) {
-                if (podeAndar) {
-                    if(!startTime && keys['ArrowUp']) startTime = Date.now();
-
-                    // MOVIMENTO RESTRITO (SÓ PARA FRENTE)
-                    if (keys['ArrowUp']) car.translateZ(1.2);
-                    if (keys['ArrowLeft']) car.rotation.y += 0.04;
-                    if (keys['ArrowRight']) car.rotation.y -= 0.04;
-
-                    // Bloqueio de distância
-                    let dist = Math.abs(car.position.z) + Math.abs(car.position.x);
-                    if(checkpointAtual < distanciasCheckpoints.length && dist > distanciasCheckpoints[checkpointAtual]) {
-                        abrirQuiz();
+                if (emMovimento) {
+                    // O carro anda sozinho para frente
+                    car.translateZ(0.8); 
+                    
+                    // Verifica se chegou na distância (Z) do destino atual
+                    if (car.position.z >= destinos[etapaAtual].z) {
+                        etapaAtual++;
+                        montarPergunta();
                     }
                 }
 
+                // Câmera segue o carro
                 const offset = new THREE.Vector3(0, 4, -12).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
 
-            if(startTime && podeAndar) {
+            if(startTime && !emMovimento && etapaAtual >= destinos.length) {
+                // Para o cronômetro no final
+            } else if (startTime) {
                 const delta = Date.now() - startTime;
                 const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
                 const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
