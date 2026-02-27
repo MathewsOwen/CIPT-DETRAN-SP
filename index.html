@@ -2,11 +2,10 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | CIRCUITO NA RUA</title>
+    <title>DETRAN-SP | ROTA CORRIGIDA</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
-        
         #quiz-container { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 30px; border-radius: 20px; border: 5px solid #ed1c24;
@@ -49,13 +48,13 @@
         let etapaAtual = 0;
         let emMovimento = false;
 
-        // --- TABULEIRO PROGRAMADO NA RUA ---
-        // Ajustei os valores de Z para o carro percorrer a avenida
+        // --- ROTA PROGRAMADA (EIXO Z) ---
+        // Se o carro bater na parede, vamos inverter esses números para positivos ou mudar o X
         const destinos = [
-            { z: -100, q: "Ao ver o sinal amarelo, você deve:", r: ["Acelerar rápido", "Reduzir e parar"], c: 1 },
-            { z: -250, q: "A placa de 'PARE' indica:", r: ["Parada obrigatória", "Diminuir a marcha"], c: 0 },
-            { z: -450, q: "Onde o pedestre deve atravessar?", r: ["Em qualquer lugar", "Na faixa de pedestres"], c: 1 },
-            { z: -600, q: "Parabéns! Você chegou à Autoescola!", r: ["Finalizar Teste", "Dirigir mais"], c: 0 }
+            { z: 150, q: "O sinal amarelo significa:", r: ["Acelerar", "Atenção/Parar"], c: 1 },
+            { z: 350, q: "Placa de 'PARE' é:", r: ["Obrigatória", "Opcional"], c: 0 },
+            { z: 600, q: "Beber e dirigir pode?", r: ["Não", "Sim"], c: 0 },
+            { z: 900, q: "Fim da linha! Parabéns!", r: ["Sair", "Reiniciar"], c: 0 }
         ];
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
@@ -63,7 +62,7 @@
             
             loader.load('vending_machine.glb', (gM) => {
                 const m = gM.scene; m.scale.set(5,5,5); 
-                m.position.set(55,0,-30); // Máquina recuada para não bater no carro
+                m.position.set(60, 0, 50); // Move a máquina para longe da pista principal
                 scene.add(m);
             });
 
@@ -71,9 +70,12 @@
                 car = gC.scene; 
                 car.scale.set(6, 6, 6); 
                 
-                // --- POSIÇÃO INICIAL NA RUA ---
-                // X: 35 coloca o carro no meio da faixa de rodagem
+                // --- POSIÇÃO DE LARGADA NA RUA ---
+                // X=35 é o meio da rua. Z=0 é o começo.
                 car.position.set(35, 0.15, 0); 
+                
+                // Força o carro a olhar para a frente da rua (Eixo Z)
+                car.rotation.y = Math.PI; // Se ele estiver de ré, mude para 0 ou Math.PI
                 
                 scene.add(car);
                 montarPergunta();
@@ -81,10 +83,7 @@
         });
 
         function montarPergunta() {
-            if (etapaAtual >= destinos.length) {
-                document.getElementById('status').innerText = "🏁 TESTE CONCLUÍDO COM SUCESSO!";
-                return;
-            }
+            if (etapaAtual >= destinos.length) return;
             emMovimento = false;
             const q = destinos[etapaAtual];
             document.getElementById('pergunta-txt').innerText = q.q;
@@ -99,11 +98,11 @@
         window.verificar = function(index) {
             if(index === destinos[etapaAtual].c) {
                 document.getElementById('quiz-container').style.display = 'none';
-                document.getElementById('status').innerText = "🚗 ACERTOU! AVANÇANDO PARA O PRÓXIMO PONTO...";
+                document.getElementById('status').innerText = "🚗 ACERTOU! DIRIGINDO ATÉ O PRÓXIMO PONTO...";
                 emMovimento = true;
                 if(!startTime) startTime = Date.now();
             } else {
-                alert("❌ Resposta Incorreta! O carro permanece parado por segurança.");
+                alert("❌ Errado! Responda corretamente para o carro avançar.");
             }
         }
 
@@ -111,29 +110,28 @@
             requestAnimationFrame(animate);
             if (car) {
                 if (emMovimento) {
-                    // O carro anda em linha reta pela rua
-                    car.translateZ(1.0); 
+                    // MOVE DIRETAMENTE NO EIXO Z (Impede de ir para os lados)
+                    car.position.z += 1.0; 
                     
-                    // Checa se atingiu o próximo ponto (usando valor absoluto para o eixo Z)
-                    if (Math.abs(car.position.z) >= Math.abs(destinos[etapaAtual].z)) {
+                    // Checa se passou do destino
+                    if (car.position.z >= destinos[etapaAtual].z) {
                         emMovimento = false;
                         etapaAtual++;
-                        setTimeout(montarPergunta, 500); // Pequena pausa antes da próxima
+                        setTimeout(montarPergunta, 500);
                     }
                 }
 
-                // Câmera dinâmica seguindo o trajeto
-                const offset = new THREE.Vector3(0, 5, -15).applyMatrix4(car.matrixWorld);
+                // Câmera fixa atrás do carro
+                const offset = new THREE.Vector3(0, 6, -18).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
 
             if(startTime && emMovimento) {
                 const delta = Date.now() - startTime;
-                const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
                 const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
                 const ms = Math.floor((delta % 1000) / 10).toString().padStart(2, '0');
-                document.getElementById('timer').innerText = `Tempo: ${mins}:${secs}.${ms}`;
+                document.getElementById('timer').innerText = `Tempo: ${secs}.${ms}`;
             }
 
             renderer.render(scene, camera);
