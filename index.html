@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | CIRCUITO NO ASFALTO</title>
+    <title>DETRAN-SP | CIRCUITO REVISADO</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
@@ -48,18 +48,16 @@
         let etapaAtual = 0;
         let emMovimento = false;
 
-        // --- ROTA AJUSTADA PARA FICAR LONGE DA CALÇADA ---
-        // Z: 222 (Mais para o centro da avenida de baixo)
-        // X: 152 (Mais para o centro da avenida da direita)
+        // --- ROTA COM DISTÂNCIA EXTRA ENTRE PERGUNTA 3 E 4 ---
         const rota = [
-            { x: -114, z: 222, pausa: false }, 
+            { x: -114, z: 222, pausa: false }, // Início
             { x: -50,  z: 222, pausa: true,  q: "Qual a cor que indica 'Pare'?", r: ["Vermelho", "Verde"], c: 0 },
             { x: 30,   z: 222, pausa: true,  q: "Cinto de segurança é obrigatório?", r: ["Sim", "Não"], c: 0 },
-            { x: 100,  z: 222, pausa: true,  q: "Sinal vermelho pode passar?", r: ["Não", "Sim"], c: 0 },
-            { x: 152,  z: 222, pausa: false }, // VÉRTICE DA CURVA (Aumentado para abrir a curva)
-            { x: 152,  z: 150, pausa: true,  q: "Celular ao dirigir?", r: ["Proibido", "Permitido"], c: 0 },
-            { x: 152,  z: 80,  pausa: true,  q: "Prioridade do pedestre?", r: ["Sim", "Não"], c: 0 },
-            { x: 152,  z: 20,  pausa: true,  q: "Parabéns! Final da Prova!", r: ["Finalizar", "Reiniciar"], c: 0 }
+            { x: 100,  z: 222, pausa: true,  q: "Sinal vermelho pode passar?", r: ["Não", "Sim"], c: 0 }, // Pergunta 3
+            { x: 155,  z: 222, pausa: false }, // Curva (Ponto extra para alongar o caminho)
+            { x: 155,  z: 130, pausa: true,  q: "Celular ao dirigir?", r: ["Proibido", "Permitido"], c: 0 }, // Pergunta 4 (Mais longe agora)
+            { x: 155,  z: 70,  pausa: true,  q: "Prioridade do pedestre?", r: ["Sim", "Não"], c: 0 },
+            { x: 155,  z: 15,  pausa: true,  q: "Parabéns! Final da Prova!", r: ["Finalizar", "Reiniciar"], c: 0 }
         ];
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
@@ -80,6 +78,7 @@
                 setTimeout(() => {
                     emMovimento = true;
                     if(!startTime) startTime = Date.now();
+                    document.getElementById('status').innerText = "🚗 EM MOVIMENTO...";
                 }, 2000);
             });
         });
@@ -112,9 +111,8 @@
             if (car && emMovimento && etapaAtual < rota.length) {
                 const destino = rota[etapaAtual];
                 
-                // Movimento com precisão de 0.07 para não derrapar na calçada
-                car.position.x += (destino.x - car.position.x) * 0.07;
-                car.position.z += (destino.z - car.position.z) * 0.07;
+                car.position.x += (destino.x - car.position.x) * 0.06;
+                car.position.z += (destino.z - car.position.z) * 0.06;
 
                 const dx = destino.x - car.position.x;
                 const dz = destino.z - car.position.z;
@@ -127,14 +125,13 @@
                     car.rotation.y += diff * 0.1;
                 }
 
-                if (Math.abs(dx) < 0.4 && Math.abs(dz) < 0.4) {
+                if (Math.abs(dx) < 0.5 && Math.abs(dz) < 0.5) {
                     if (destino.pausa) {
                         emMovimento = false;
                         montarPergunta();
                     } else { etapaAtual++; }
                 }
 
-                // CÂMERA DE LADO (PERFIL ESQUERDO)
                 const offset = new THREE.Vector3(-45, 12, 0).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
