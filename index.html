@@ -1,52 +1,206 @@
-// --- ROTA RECALIBRADA (CURVA MAIS LONGA) ---
-const rota = [
-    { x: -114, z: 208, pausa: false }, // Início (Amarelo)
-    { x: -50,  z: 208, pausa: true,  q: "Qual a cor que indica 'Pare'?", r: ["Vermelho", "Verde"], c: 0 },
-    { x: 30,   z: 208, pausa: true,  q: "Devemos usar o cinto?", r: ["Sempre", "Nunca"], c: 0 },
-    { x: 100,  z: 208, pausa: true,  q: "Podemos avançar o sinal vermelho?", r: ["Sim", "Não"], c: 1 },
-    { x: 145,  z: 208, pausa: false }, // PONTO DA CURVA (Aumentado para ele ir mais longe)
-    { x: 145,  z: 150, pausa: true,  q: "Celular ao dirigir é permitido?", r: ["Não", "Sim"], c: 0 },
-    { x: 145,  z: 80,  pausa: true,  q: "O pedestre tem prioridade?", r: ["Sim", "Não"], c: 0 },
-    { x: 145,  z: 20,  pausa: true,  q: "Parabéns! Fim da Prova!", r: ["Finalizar", "Reiniciar"], c: 0 }
-];
-
-// ... (No seu loader, mantenha o resto igual) ...
-
-function animate() {
-    requestAnimationFrame(animate);
-    if (car && emMovimento && etapaAtual < rota.length) {
-        const destino = rota[etapaAtual];
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>DETRAN-SP | CIRCUITO FINAL</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         
-        // Movimentação
-        const dx = destino.x - car.position.x;
-        const dz = destino.z - car.position.z;
-        
-        car.position.x += dx * 0.05;
-        car.position.z += dz * 0.05;
-
-        // Rotação
-        if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
-            const anguloAlvo = Math.atan2(dx, dz);
-            car.rotation.y = anguloAlvo;
+        #timer { 
+            position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; 
+            color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; 
+            border: 2px solid #ed1c24; z-index: 100; 
         }
 
-        // Chegou no ponto?
-        if (Math.abs(dx) < 0.5 && Math.abs(dz) < 0.5) {
-            if (destino.pausa) {
-                emMovimento = false;
-                montarPergunta();
-            } else {
+        #quiz-container { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 30px; border-radius: 20px; border: 5px solid #ed1c24;
+            text-align: center; z-index: 2000; display: none; width: 350px; 
+            box-shadow: 0 0 100px rgba(0,0,0,0.8);
+        }
+
+        .btn-resp { 
+            display: block; width: 100%; margin: 10px 0; padding: 12px; 
+            font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc; 
+            background: #f9f9f9; font-weight: bold; transition: 0.3s;
+        }
+
+        .btn-resp:hover { background: #ed1c24; color: white; }
+
+        #status { 
+            position: fixed; bottom: 0; width: 100%; text-align: center; 
+            color: white; background: rgba(0,0,0,0.9); padding: 15px; 
+            font-weight: bold; z-index: 100; font-size: 18px; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="timer">Tempo: 00s</div>
+    <div id="status">🚥 CARREGANDO CIDADE...</div>
+
+    <div id="quiz-container">
+        <h2 id="pergunta-txt" style="color:#333">Pergunta</h2>
+        <div id="opcoes"></div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        document.body.appendChild(renderer.domElement);
+
+        // Iluminação
+        scene.add(new THREE.AmbientLight(0xffffff, 2.0));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(50, 100, 50);
+        scene.add(sun);
+
+        const loader = new GLTFLoader();
+        let car, startTime = null;
+        let etapaAtual = 0;
+        let emMovimento = false;
+
+        // --- ROTA CALIBRADA (Baseada no seu desenho e GPS) ---
+        // X: -114, Z: 215 -> Ponto Inicial (Amarelo)
+        // X: 142, Z: 215 -> Ponto da Curva (Esquina)
+        const rota = [
+            { x: -114, z: 215, pausa: false }, 
+            { x: -50,  z: 215, pausa: true,  q: "Qual a cor que indica 'Pare'?", r: ["Vermelho", "Verde"], c: 0 },
+            { x: 30,   z: 215, pausa: true,  q: "Devemos usar o cinto de segurança?", r: ["Sempre", "Nunca"], c: 0 },
+            { x: 100,  z: 215, pausa: true,  q: "Podemos avançar o sinal vermelho?", r: ["Sim", "Não"], c: 1 },
+            { x: 142,  z: 215, pausa: false }, // CURVA EXATA NO CRUZAMENTO
+            { x: 142,  z: 150, pausa: true,  q: "Celular ao dirigir é permitido?", r: ["Não", "Sim"], c: 0 },
+            { x: 142,  z: 80,  pausa: true,  q: "O pedestre tem prioridade na faixa?", r: ["Sim", "Não"], c: 0 },
+            { x: 142,  z: 20,  pausa: true,  q: "Parabéns! Você concluiu a prova com sucesso!", r: ["Finalizar", "Reiniciar"], c: 0 }
+        ];
+
+        // Carregar Cidade
+        loader.load('city_-_cidade (2).glb', (gltf) => {
+            const cidade = gltf.scene;
+            
+            // REMOVER BARRICADAS (Cones, cercas, muretas)
+            cidade.traverse((obj) => {
+                const nomesParaRemover = ["fence", "barricade", "cone", "mureta", "barrier"];
+                if (nomesParaRemover.some(n => obj.name.toLowerCase().includes(n))) {
+                    obj.visible = false;
+                }
+            });
+            
+            scene.add(cidade);
+            document.getElementById('status').innerText = "🚥 CARREGANDO FERRARI...";
+            
+            // Carregar Carro
+            loader.load('low_poly_ferrari_roma.glb', (gC) => {
+                car = gC.scene; 
+                car.scale.set(6, 6, 6); 
+                car.position.set(rota[0].x, 0.15, rota[0].z);
+                scene.add(car);
+                
+                document.getElementById('status').innerText = "🚗 PREPARAR... PARTIDA!";
+                
+                setTimeout(() => {
+                    emMovimento = true;
+                    if(!startTime) startTime = Date.now();
+                    document.getElementById('status').innerText = "🚗 EM MOVIMENTO PELA AVENIDA...";
+                }, 2000);
+            });
+        });
+
+        function montarPergunta() {
+            const p = rota[etapaAtual];
+            if (!p.q) return;
+            
+            document.getElementById('pergunta-txt').innerText = p.q;
+            const container = document.getElementById('opcoes');
+            container.innerHTML = "";
+            
+            p.r.forEach((txt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-resp';
+                btn.innerText = txt;
+                btn.onclick = () => verificar(i);
+                container.appendChild(btn);
+            });
+            
+            document.getElementById('quiz-container').style.display = 'block';
+        }
+
+        window.verificar = function(index) {
+            if(index === rota[etapaAtual].c) {
+                document.getElementById('quiz-container').style.display = 'none';
+                document.getElementById('status').innerText = "✅ CORRETO! ACELERANDO...";
                 etapaAtual++;
+                emMovimento = true;
+            } else {
+                alert("❌ Resposta incorreta! Preste atenção nas regras de trânsito.");
             }
         }
 
-        // --- CÂMERA DE LADO (PERFIL) ---
-        // X: -35 joga a câmera para a lateral esquerda do carro
-        // Y: 10 dá um pouco de altura
-        // Z: 0 mantém ela alinhada com o meio do carro
-        const offset = new THREE.Vector3(-35, 10, 0).applyMatrix4(car.matrixWorld);
-        camera.position.lerp(offset, 0.1);
-        camera.lookAt(car.position);
-    }
-    // ... restando do código ...
-}
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (car && emMovimento && etapaAtual < rota.length) {
+                const destino = rota[etapaAtual];
+                
+                // Movimento Suave (Interpolação)
+                car.position.x += (destino.x - car.position.x) * 0.07;
+                car.position.z += (destino.z - car.position.z) * 0.07;
+
+                // Rotação suave (Olhar para o destino)
+                const dx = destino.x - car.position.x;
+                const dz = destino.z - car.position.z;
+                
+                if (Math.abs(dx) > 0.2 || Math.abs(dz) > 0.2) {
+                    const anguloAlvo = Math.atan2(dx, dz);
+                    // Faz o carro virar suavemente
+                    let diff = anguloAlvo - car.rotation.y;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    car.rotation.y += diff * 0.1;
+                }
+
+                // Checagem de Proximidade (Cravado em 0.4 para curva precisa)
+                if (Math.abs(dx) < 0.4 && Math.abs(dz) < 0.4) {
+                    if (destino.pausa) {
+                        emMovimento = false;
+                        montarPergunta();
+                    } else {
+                        etapaAtual++;
+                    }
+                }
+
+                // --- CÂMERA DE LADO (VISÃO DE PERFIL) ---
+                // X: -45 (Lateral), Y: 12 (Altura), Z: 0 (Centralizado com o carro)
+                const offset = new THREE.Vector3(-45, 12, 0).applyMatrix4(car.matrixWorld);
+                camera.position.lerp(offset, 0.1);
+                camera.lookAt(car.position);
+            }
+
+            // Atualizar Cronômetro
+            if(startTime && emMovimento) {
+                const delta = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('timer').innerText = `Tempo: ${delta}s`;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Ajuste de janela
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
