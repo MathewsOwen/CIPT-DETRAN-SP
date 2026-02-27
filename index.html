@@ -2,29 +2,37 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | CIRCUITO OFICIAL</title>
+    <title>DETRAN-SP | PROVA PRÁTICA</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
-        #rank { position: absolute; top: 15px; right: 20px; font-size: 18px; color: gold; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; z-index: 100; }
         
-        /* POP-UP DE PERGUNTA */
+        /* TELA DE INÍCIO */
+        #start-screen { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 3000; color: white; 
+        }
+        button#start-btn { padding: 20px 40px; font-size: 24px; background: #ed1c24; color: white; border: none; cursor: pointer; border-radius: 10px; }
+
+        /* QUIZ */
         #quiz-container { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 30px; border-radius: 20px; border: 5px solid #ed1c24;
-            text-align: center; z-index: 2000; display: none; width: 400px; box-shadow: 0 0 100px rgba(0,0,0,0.8);
+            text-align: center; z-index: 2000; display: none; width: 400px;
         }
-        .btn-resp { display: block; width: 100%; margin: 10px 0; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc; background: #f9f9f9; font-weight: bold; }
-        .btn-resp:hover { background: #ed1c24; color: white; }
-        #status { position: fixed; bottom: 0; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.9); padding: 15px; font-weight: bold; z-index: 100; font-size: 18px; }
+        .btn-resp { display: block; width: 100%; margin: 10px 0; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="timer">00:00.00</div>
-    <div id="rank">Melhor: --:--</div>
-    <div id="status">🚀 ACELERE PARA COMEÇAR O TESTE!</div>
+    <div id="start-screen">
+        <h1>PROVA DO DETRAN-SP</h1>
+        <p>Responda as perguntas para seguir no circuito.</p>
+        <button id="start-btn" onclick="iniciarProva()">COMEÇAR PROVA</button>
+    </div>
 
+    <div id="timer">Tempo: 00:00.00</div>
     <div id="quiz-container">
         <h2 id="pergunta-txt" style="color:#333">Pergunta</h2>
         <div id="opcoes"></div>
@@ -36,65 +44,47 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        
-        // AJUSTE DE CÂMERA INICIAL (Para não começar embaixo do carro)
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        camera.position.set(0, 50, 100); // Começa do alto olhando pra baixo
-
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.8));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-        sun.position.set(50, 100, 50);
-        scene.add(sun);
-
-        const loader = new GLTFLoader();
-        let car, city, startTime = null, finalTime = null;
-        let keys = {};
+        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+        
+        // ESTADO DO JOGO
+        let car, podeAndar = false; // CARRO COMEÇA TRAVADO
         let checkpointAtual = 0;
-        let podeAndar = true;
-
+        let startTime = null;
         const perguntas = [
-            { q: "Qual a cor da placa de regulamentação?", r: ["Vermelha", "Amarela", "Verde"], c: 0 },
-            { q: "O que significa a placa 'PARE'?", r: ["Atenção", "Parada Obrigatória"], c: 1 },
-            { q: "A preferência na rotatória é de quem?", r: ["Quem vem da direita", "Quem já está nela"], c: 1 },
+            { q: "Qual a cor da placa de regulamentação?", r: ["Vermelha", "Amarela"], c: 0 },
+            { q: "O que significa 'PARE'?", r: ["Acelerar", "Parada Obrigatória"], c: 1 },
+            { q: "Preferência na rotatória é de:", r: ["Quem já está nela", "Quem chega rápido"], c: 0 },
             { q: "Beber e dirigir resulta em:", r: ["Multa leve", "Infração Gravíssima"], c: 1 }
         ];
+        const distancias = [100, 300, 600, 900];
 
-        // Distâncias onde o carro vai parar para perguntar
-        const distanciasCheckpoints = [150, 400, 700, 1000]; 
+        // LÓGICA DE INÍCIO
+        window.iniciarProva = function() {
+            document.getElementById('start-screen').style.display = 'none';
+            podeAndar = true;
+            startTime = Date.now();
+        }
 
-        loader.load('city_-_cidade (2).glb', (gltf) => {
-            scene.add(gltf.scene);
-            
-            loader.load('vending_machine.glb', (gM) => {
-                const m = gM.scene; m.scale.set(5,5,5); m.position.set(45,0,-30); scene.add(m);
-            });
-
-            loader.load('low_poly_ferrari_roma.glb', (gC) => {
-                car = gC.scene; 
-                car.scale.set(6, 6, 6); 
-                car.position.set(0, 0.15, 0); 
-                scene.add(car);
-                
-                // Reposiciona a câmera atrás do carro IMEDIATAMENTE
-                const initOffset = new THREE.Vector3(0, 4, -12).applyMatrix4(car.matrixWorld);
-                camera.position.copy(initOffset);
-                camera.lookAt(car.position);
-            });
+        // CARREGAMENTO
+        const loader = new GLTFLoader();
+        loader.load('city_-_cidade (2).glb', (g) => { scene.add(g.scene); });
+        loader.load('low_poly_ferrari_roma.glb', (g) => {
+            car = g.scene; car.scale.set(6,6,6); scene.add(car);
         });
 
+        // QUIZ
         window.verificarResposta = function(index) {
             if(index === perguntas[checkpointAtual].c) {
                 checkpointAtual++;
                 podeAndar = true;
                 document.getElementById('quiz-container').style.display = 'none';
-                document.getElementById('status').innerText = "✅ CORRETO! ACELERE!";
             } else {
-                alert("❌ RESPOSTA ERRADA! TENTE NOVAMENTE.");
+                alert("❌ Resposta errada! Motor continua travado.");
             }
         }
 
@@ -102,50 +92,36 @@
             podeAndar = false;
             const q = perguntas[checkpointAtual];
             document.getElementById('pergunta-txt').innerText = q.q;
-            const container = document.getElementById('opcoes');
-            container.innerHTML = "";
+            const cont = document.getElementById('opcoes'); cont.innerHTML = "";
             q.r.forEach((txt, i) => {
-                container.innerHTML += `<button class="btn-resp" onclick="verificarResposta(${i})">${txt}</button>`;
+                cont.innerHTML += `<button class="btn-resp" onclick="verificarResposta(${i})">${txt}</button>`;
             });
             document.getElementById('quiz-container').style.display = 'block';
         }
 
+        // MOVIMENTAÇÃO E CONTROLE
+        let keys = {};
         window.onkeydown = (e) => keys[e.code] = true;
         window.onkeyup = (e) => keys[e.code] = false;
 
         function animate() {
             requestAnimationFrame(animate);
-            if (car) {
-                if (podeAndar) {
-                    if(!startTime && keys['ArrowUp']) startTime = Date.now();
+            if (car && podeAndar) {
+                if (keys['ArrowUp']) car.translateZ(1.2);
+                if (keys['ArrowDown']) car.translateZ(-0.6);
+                if (keys['ArrowLeft']) car.rotation.y += 0.06;
+                if (keys['ArrowRight']) car.rotation.y -= 0.06;
 
-                    const speed = 1.2;
-                    if (keys['ArrowUp']) car.translateZ(speed);
-                    if (keys['ArrowDown']) car.translateZ(-speed/2);
-                    if (keys['ArrowLeft']) car.rotation.y += 0.06;
-                    if (keys['ArrowRight']) car.rotation.y -= 0.06;
-
-                    // Lógica de distância percorrida
-                    let dist = car.position.length();
-                    if(checkpointAtual < distanciasCheckpoints.length && dist > distanciasCheckpoints[checkpointAtual]) {
-                        abrirQuiz();
-                    }
+                // CHECKPOINTS
+                if(checkpointAtual < distancias.length && car.position.length() > distancias[checkpointAtual]) {
+                    abrirQuiz();
                 }
 
-                // Câmera segue o carro suavemente (ajustada para não entrar no chão)
+                // Câmera
                 const offset = new THREE.Vector3(0, 4, -12).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
-
-            if(startTime && podeAndar) {
-                const delta = Date.now() - startTime;
-                const mins = Math.floor(delta / 60000).toString().padStart(2, '0');
-                const secs = Math.floor((delta % 60000) / 1000).toString().padStart(2, '0');
-                const ms = Math.floor((delta % 1000) / 10).toString().padStart(2, '0');
-                document.getElementById('timer').innerText = `${mins}:${secs}.${ms}`;
-            }
-
             renderer.render(scene, camera);
         }
         animate();
