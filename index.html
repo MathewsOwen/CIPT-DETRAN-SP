@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | CIRCUITO REVISADO FINAL</title>
+    <title>DETRAN-SP | ZOOM AUMENTADO</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
@@ -19,7 +19,7 @@
 <body>
 
     <div id="timer">Tempo: 00s</div>
-    <div id="status">🚥 ALINHANDO NO CENTRO DA RUA...</div>
+    <div id="status">🚥 APROXIMANDO CÂMERA DETALHADA...</div>
 
     <div id="quiz-container">
         <h2 id="pergunta-txt" style="color:#333">Pergunta</h2>
@@ -38,7 +38,7 @@
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 2.0));
+        scene.add(new THREE.AmbientLight(0xffffff, 2.5));
         const sun = new THREE.DirectionalLight(0xffffff, 1.2);
         sun.position.set(50, 100, 50);
         scene.add(sun);
@@ -48,16 +48,13 @@
         let etapaAtual = 0;
         let emMovimento = false;
 
-        // --- ROTA COM CURVA ABERTA (FORÇADA) ---
-        // Z: 224 (Meio da rua)
-        // X: 165 (Ponto de curva avançado para não cortar a quina)
         const rota = [
             { x: -114, z: 224, pausa: false }, 
             { x: -50,  z: 224, pausa: true,  q: "Qual a cor que indica 'Pare'?", r: ["Vermelho", "Verde"], c: 0 },
             { x: 30,   z: 224, pausa: true,  q: "Cinto de segurança é obrigatório?", r: ["Sim", "Não"], c: 0 },
-            { x: 100,  z: 224, pausa: true,  q: "Sinal vermelho pode passar?", r: ["Não", "Sim"], c: 0 }, // Pergunta 3
-            { x: 165,  z: 224, pausa: false }, // VÉRTICE: Ele vai bem longe antes de virar
-            { x: 165,  z: 110, pausa: true,  q: "Celular ao dirigir?", r: ["Proibido", "Permitido"], c: 0 }, // Pergunta 4 (Distância aumentada)
+            { x: 100,  z: 224, pausa: true,  q: "Sinal vermelho pode passar?", r: ["Não", "Sim"], c: 0 },
+            { x: 165,  z: 224, pausa: false }, 
+            { x: 165,  z: 110, pausa: true,  q: "Celular ao dirigir?", r: ["Proibido", "Permitido"], c: 0 },
             { x: 165,  z: 60,  pausa: true,  q: "Prioridade do pedestre?", r: ["Sim", "Não"], c: 0 },
             { x: 165,  z: 10,  pausa: true,  q: "Parabéns! Final da Prova!", r: ["Finalizar", "Reiniciar"], c: 0 }
         ];
@@ -76,12 +73,7 @@
                 car.scale.set(6, 6, 6); 
                 car.position.set(rota[0].x, 0.15, rota[0].z);
                 scene.add(car);
-                
-                setTimeout(() => {
-                    emMovimento = true;
-                    if(!startTime) startTime = Date.now();
-                    document.getElementById('status').innerText = "🚗 EM MOVIMENTO...";
-                }, 2000);
+                setTimeout(() => { emMovimento = true; if(!startTime) startTime = Date.now(); }, 2000);
             });
         });
 
@@ -112,8 +104,6 @@
             requestAnimationFrame(animate);
             if (car && emMovimento && etapaAtual < rota.length) {
                 const destino = rota[etapaAtual];
-                
-                // Movimentação com suavidade ajustada para curvas
                 car.position.x += (destino.x - car.position.x) * 0.05;
                 car.position.z += (destino.z - car.position.z) * 0.05;
 
@@ -128,15 +118,13 @@
                     car.rotation.y += diff * 0.1;
                 }
 
-                // Chegada no ponto: Reduzi a margem para 0.3 para ele chegar mais perto do ponto de segurança antes de mudar
                 if (Math.abs(dx) < 0.3 && Math.abs(dz) < 0.3) {
-                    if (destino.pausa) {
-                        emMovimento = false;
-                        montarPergunta();
-                    } else { etapaAtual++; }
+                    if (destino.pausa) { emMovimento = false; montarPergunta(); } else { etapaAtual++; }
                 }
 
-                const offset = new THREE.Vector3(-45, 12, 0).applyMatrix4(car.matrixWorld);
+                // --- CÂMERA COM ZOOM AUMENTADO (+50% PERTO) ---
+                // Diminuí de 45 para 22 (X) e de 12 para 6 (Y)
+                const offset = new THREE.Vector3(-22, 6, 0).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
