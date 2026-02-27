@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DETRAN-SP | CIRCUITO CURTO</title>
+    <title>DETRAN-SP | FINAL ADJUST</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
         #timer { position: absolute; top: 15px; left: 20px; font-size: 24px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #ed1c24; z-index: 100; }
@@ -19,10 +19,10 @@
 <body>
 
     <div id="timer">Tempo: 00:00.00</div>
-    <div id="status">🚥 ALINHANDO NA RUA...</div>
+    <div id="status">🚥 POSICIONANDO NA AVENIDA...</div>
 
     <div id="quiz-container">
-        <h2 id="pergunta-txt" style="color:#333">Carregando...</h2>
+        <h2 id="pergunta-txt" style="color:#333">Carregando Prova...</h2>
         <div id="opcoes"></div>
     </div>
 
@@ -48,12 +48,12 @@
         let etapaAtual = 0;
         let emMovimento = false;
 
-        // --- CIRCUITO CURTO (X) ---
-        // Diminuí os valores para as paradas serem mais próximas
+        // --- DESTINOS CURTOS (EIXO X) ---
+        // O carro vai do X=100 para o X=0
         const destinos = [
-            { x: -50, q: "O sinal vermelho serve para:", r: ["Parar", "Acelerar"], c: 0 },
-            { x: -120, q: "Pode estacionar na frente de guia rebaixada?", r: ["Sim", "Não"], c: 1 },
-            { x: -200, q: "Final do mini teste!", r: ["Sair", "Reiniciar"], c: 0 }
+            { x: 70, q: "O que fazer ao ver o sinal amarelo?", r: ["Acelerar", "Reduzir e Parar"], c: 1 },
+            { x: 40, q: "A placa de 'PARE' é obrigatória?", r: ["Sim", "Não"], c: 0 },
+            { x: 10, q: "Parabéns! Você concluiu a prova!", r: ["Finalizar", "Reiniciar"], c: 0 }
         ];
 
         loader.load('city_-_cidade (2).glb', (gltf) => {
@@ -63,12 +63,14 @@
                 car = gC.scene; 
                 car.scale.set(6, 6, 6); 
                 
-                // --- AJUSTE DE RUA ---
-                // Mudei o Z para 35 para o carro ficar no asfalto da avenida lateral
-                // Se ele ainda bater em algo, teste mudar esse 35 para 0 ou -35
-                car.position.set(50, 0.15, 35); 
+                // --- AJUSTE DE POSIÇÃO NA AVENIDA ---
+                // X: 100 (Início da rua)
+                // Z: 10 (Aqui é o ajuste para não bater nos prédios)
+                car.position.set(100, 0.15, 10); 
                 
+                // Gira o carro para olhar para o sentido negativo do X (Avenida)
                 car.rotation.y = -Math.PI / 2; 
+                
                 scene.add(car);
                 montarPergunta();
             });
@@ -90,11 +92,11 @@
         window.verificar = function(index) {
             if(index === destinos[etapaAtual].c) {
                 document.getElementById('quiz-container').style.display = 'none';
-                document.getElementById('status').innerText = "🚗 ACERTOU! MOVENDO...";
+                document.getElementById('status').innerText = "🚗 ACERTOU! MOVENDO PELA AVENIDA...";
                 emMovimento = true;
                 if(!startTime) startTime = Date.now();
             } else {
-                alert("❌ Errado!");
+                alert("❌ Errado! Tente novamente.");
             }
         }
 
@@ -102,15 +104,14 @@
             requestAnimationFrame(animate);
             if (car) {
                 if (emMovimento) {
-                    car.position.x -= 1.0; 
+                    car.position.x -= 0.8; // Velocidade do tabuleiro
                     if (car.position.x <= destinos[etapaAtual].x) {
                         emMovimento = false;
                         etapaAtual++;
                         setTimeout(montarPergunta, 500);
                     }
                 }
-                // Câmera posicionada para ver a rua e o carro de lado/trás
-                const offset = new THREE.Vector3(15, 5, 0).applyMatrix4(car.matrixWorld);
+                const offset = new THREE.Vector3(18, 6, 0).applyMatrix4(car.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(car.position);
             }
