@@ -3,89 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DETRAN-SP | Simulador Pro</title>
+    <title>DETRAN-SP | Simulador de Exame</title>
     <style>
-        :root { --primary: #ed1c24; --dark: #000; }
+        :root { --primary: #ed1c24; --accent-blue: #0055ff; --dark: #000; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
 
-        /* --- ESTILO DO SLIDE DE INTRO (LOGO) --- */
-        #intro-overlay {
-            position: fixed; inset: 0; background: #000; z-index: 6000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1s ease-in-out;
-        }
+        /* Interface de Login (Já abre aqui) */
+        #ui-layer { position: fixed; inset: 0; z-index: 4000; background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,1) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
+        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); padding: 50px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        
+        .logo-main { font-size: 50px; margin-bottom: 20px; font-weight: 900; letter-spacing: -2px; }
+        .sp-text { color: var(--accent-blue); }
 
-        .logo-container {
-            position: relative; overflow: hidden; padding: 20px;
-            animation: fadeIn 1.5s ease-out;
-        }
+        input { background: rgba(255,255,255,0.08); border: 1px solid #333; padding: 18px; border-radius: 12px; color: white; font-size: 18px; width: 300px; margin: 25px 0; outline: none; text-align: center; }
+        input:focus { border-color: var(--accent-blue); }
+        
+        .main-btn { background: var(--primary); color: white; border: none; padding: 18px 50px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .main-btn:hover { transform: translateY(-3px); background: #ff2a33; }
 
-        /* Efeito de brilho passando pelo logo */
-        .logo-container::after {
-            content: ''; position: absolute; top: 0; left: -150%;
-            width: 50%; height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
-            transform: skewX(-25deg);
-            animation: shine 2s infinite;
-        }
+        /* Elementos do Jogo */
+        #timer { position: absolute; top: 25px; left: 25px; font-size: 24px; color: white; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 15px 25px; border-radius: 50px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); }
+        
+        #ranking-container { position: fixed; top: 25px; right: 25px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); color: white; padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); z-index: 100; min-width: 200px; }
+        
+        #quiz-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 45px; border-radius: 25px; width: 400px; display: none; z-index: 3000; box-shadow: 0 0 120px rgba(0,0,0,0.6); border-bottom: 10px solid var(--primary); }
+        .btn-resp { display: block; width: 100%; margin: 15px 0; padding: 18px; font-size: 17px; cursor: pointer; border-radius: 12px; border: 1px solid #eee; background: #fcfcfc; font-weight: 600; color: #333; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; font-size: 12px; color: #aaa; text-transform: uppercase; }
+        td { padding: 5px 0; font-weight: bold; }
 
-        @keyframes shine {
-            0% { left: -150%; }
-            100% { left: 150%; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .intro-text {
-            color: white; margin-top: 20px; letter-spacing: 4px;
-            font-size: 14px; opacity: 0.6; text-transform: uppercase;
-        }
-
-        /* --- RESTANTE DA INTERFACE --- */
         #loading-screen { position: fixed; inset: 0; background: #111; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .loader { width: 200px; height: 3px; background: #333; border-radius: 2px; margin-top: 20px; overflow: hidden; }
-        .loader-bar { width: 0%; height: 100%; background: var(--primary); transition: 0.3s; }
-
-        #ui-layer { position: fixed; inset: 0; z-index: 4000; background: radial-gradient(circle, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 100%); display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
-        .glass-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(15px); padding: 40px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1); }
-        
-        input { background: rgba(255,255,255,0.1); border: 1px solid #444; padding: 15px; border-radius: 10px; color: white; font-size: 18px; width: 280px; margin: 20px 0; outline: none; }
-        .main-btn { background: var(--primary); color: white; border: none; padding: 15px 40px; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
-        
-        #timer { position: absolute; top: 20px; left: 20px; font-size: 22px; color: white; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 12px 20px; border-radius: 50px; z-index: 100; }
-        #quiz-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 20px; width: 400px; display: none; z-index: 3000; box-shadow: 0 0 100px rgba(0,0,0,0.5); }
-        .btn-resp { display: block; width: 100%; margin: 12px 0; padding: 15px; font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #eee; background: #f8f9fa; font-weight: 600; }
+        .loader { width: 220px; height: 3px; background: #222; border-radius: 5px; margin-top: 20px; overflow: hidden; }
+        .loader-bar { width: 0%; height: 100%; background: var(--primary); transition: 0.4s; }
     </style>
 </head>
 <body>
 
-    <div id="intro-overlay">
-        <div class="logo-container">
-            <h1 style="color:white; font-size: 50px; margin:0;">DETRAN<span style="color:var(--primary)">SP</span></h1>
-        </div>
-        <div class="intro-text">Desenvolvido para Educação no Trânsito</div>
-    </div>
-
     <div id="loading-screen">
+        <h3 style="letter-spacing: 3px;">CARREGANDO CIRCUITO</h3>
         <div class="loader"><div class="loader-bar" id="l-bar"></div></div>
     </div>
 
     <div id="ui-layer">
         <div class="glass-card">
-            <h1>BEM-VINDO</h1>
-            <p>SISTEMA DE AVALIAÇÃO PRÁTICA</p>
-            <input type="text" id="playerName" placeholder="Nome do Aluno" maxlength="20">
+            <div class="logo-main">DETRAN<span class="sp-text">SP</span></div>
+            <input type="text" id="playerName" placeholder="Nome do Aluno" maxlength="25">
             <br>
-            <button class="main-btn" onclick="iniciarProva()">Entrar em Tela Cheia</button>
+            <button class="main-btn" onclick="iniciarProva()">Iniciar Exame</button>
         </div>
     </div>
 
+    <div id="ranking-container">
+        <strong style="color: var(--accent-blue)">🏆 TOP 5 ALUNOS</strong>
+        <table id="rankingTable">
+            <thead><tr><th>Nome</th><th>Tempo</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
     <div id="timer">00:00.0s</div>
+
     <div id="quiz-container">
-        <h3 id="pergunta-txt" style="color:#333">Pergunta</h3>
+        <h3 id="pergunta-txt" style="color:#222; margin-top:0;">Pergunta</h3>
         <div id="opcoes"></div>
     </div>
 
@@ -98,23 +78,13 @@
         
         const rota = [
             { x: -114, z: 224, p: false }, 
-            { x: -50,  z: 224, p: true,  q: "Qual a cor que indica 'PARE'?", r: ["Vermelho", "Verde"], c: 0 },
-            { x: 30,   z: 224, p: true,  q: "Cinto é obrigatório atrás?", r: ["Sim", "Não"], c: 0 },
-            { x: 100,  z: 224, p: true,  q: "Sinal vermelho é infração?", r: ["Gravíssima", "Média"], c: 0 },
-            { x: 165,  z: 224, p: false }, 
-            { x: 165,  z: 110, p: true,  q: "Celular ao dirigir?", r: ["Proibido", "Permitido"], c: 0 },
-            { x: 165,  z: 10,  p: true,  q: "Fim do exame!", r: ["Finalizar", "Reiniciar"], c: 0, final: true }
+            { x: -50,  z: 224, p: true,  q: "Qual cor indica PARE?", r: ["Vermelho", "Verde"], c: 0 },
+            { x: 30,   z: 224, p: true,  q: "Cinto é obrigatório?", r: ["Sim", "Não"], c: 0 },
+            { x: 100,  z: 224, p: true,  q: "Avançar sinal vermelho é infração?", r: ["Gravíssima", "Média"], c: 0 },
+            { x: 165,  z: 224, p: false }, // Curva aberta (correção da calçada)
+            { x: 165,  z: 110, p: true,  q: "Pode usar celular?", r: ["Proibido", "Sim"], c: 0 },
+            { x: 165,  z: 10,  p: true,  q: "Exame concluído!", r: ["Salvar e Sair", "Reiniciar"], c: 0, final: true }
         ];
-
-        // --- LÓGICA DE SEQUÊNCIA DE TELAS ---
-        window.addEventListener('load', () => {
-            // Mostra o logo por 3 segundos
-            setTimeout(() => {
-                const intro = document.getElementById('intro-overlay');
-                intro.style.opacity = '0';
-                setTimeout(() => intro.remove(), 1000);
-            }, 3500);
-        });
 
         function init() {
             scene = new THREE.Scene();
@@ -125,8 +95,7 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            const ambient = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
-            scene.add(ambient);
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.8));
             const sun = new THREE.DirectionalLight(0xffffff, 1.0);
             sun.position.set(100, 200, 100);
             scene.add(sun);
@@ -136,50 +105,46 @@
 
         function carregarModelos() {
             const loader = new GLTFLoader();
-            const bar = document.getElementById('l-bar');
-
             loader.load('city_-_cidade (2).glb', (gltf) => {
                 gltf.scene.traverse(obj => {
                     if(["fence", "barricade", "cone", "mureta", "machine", "soda"].some(n => obj.name.toLowerCase().includes(n))) obj.visible = false;
                 });
                 scene.add(gltf.scene);
-                bar.style.width = "60%";
+                document.getElementById('l-bar').style.width = "60%";
 
                 loader.load('low_poly_ferrari_roma.glb', (gC) => {
                     car = gC.scene;
                     car.scale.set(6, 6, 6);
                     car.position.set(rota[0].x, 0.15, rota[0].z);
                     scene.add(car);
-                    
-                    bar.style.width = "100%";
-                    setTimeout(() => {
-                        document.getElementById('loading-screen').style.display = 'none';
-                        document.getElementById('ui-layer').style.display = 'flex'; // Só mostra o menu após carregar tudo
-                    }, 500);
+                    document.getElementById('l-bar').style.width = "100%";
+                    setTimeout(() => { document.getElementById('loading-screen').style.display = 'none'; }, 500);
                 });
             });
         }
 
         window.iniciarProva = function() {
             const input = document.getElementById('playerName');
-            if(input.value.length < 3) return alert("Digite o nome do aluno.");
-            
-            // Ativa Fullscreen
+            if(input.value.length < 3) return alert("Digite o nome.");
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-
             motorista = input.value;
             document.getElementById('ui-layer').style.display = 'none';
             emMovimento = true;
             startTime = Date.now();
         }
 
-        // (Aqui continuam as funções de verificação e animação que já temos...)
         window.verificar = function(idx) {
             const p = rota[etapaAtual];
             if(idx === p.c) {
                 document.getElementById('quiz-container').style.display = 'none';
-                if(p.final) { location.reload(); } else { etapaAtual++; emMovimento = true; }
-            } else { alert("Erro!"); }
+                if(p.final) {
+                    const total = ((Date.now() - startTime) / 1000).toFixed(1);
+                    let d = JSON.parse(localStorage.getItem('detranRanking') || '[]');
+                    d.push({ nome: motorista, tempo: parseFloat(total) });
+                    localStorage.setItem('detranRanking', JSON.stringify(d));
+                    location.reload();
+                } else { etapaAtual++; emMovimento = true; }
+            } else { alert("Infração!"); }
         }
 
         function montarQuiz() {
@@ -228,7 +193,17 @@
             renderer.render(scene, camera);
         }
 
+        function updateRanking() {
+            const d = JSON.parse(localStorage.getItem('detranRanking') || '[]');
+            const b = document.querySelector('#rankingTable tbody');
+            b.innerHTML = "";
+            d.sort((x,y) => x.tempo - y.tempo).slice(0, 5).forEach(i => {
+                b.innerHTML += `<tr><td>${i.nome}</td><td>${i.tempo}s</td></tr>`;
+            });
+        }
+
         init();
+        updateRanking();
         animate();
     </script>
 </body>
