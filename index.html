@@ -3,61 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DETRAN-SP | Simulador Ultra Rápido</title>
+    <title>DETRAN-SP | Simulador Oficial</title>
     <style>
-        :root { --primary: #ed1c24; --accent-blue: #0055ff; --dark: #000; }
+        :root { --primary: #ed1c24; --accent-blue: #0044cc; --dark: #000; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
 
-        /* Interface de Login - Transição Instantânea */
-        #ui-layer { position: fixed; inset: 0; z-index: 4000; background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,1) 100%); display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
-        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); padding: 50px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); }
+        /* --- SLIDE DE INTRO (LOGO) --- */
+        #intro-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 6000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s ease-in-out;
+        }
+        .logo-container {
+            position: relative; animation: fadeIn 1s ease-out;
+        }
+        .logo-text { font-size: 60px; font-weight: 900; color: white; letter-spacing: -2px; }
+        .sp-blue { color: var(--accent-blue); }
         
-        .logo-main { font-size: 50px; margin-bottom: 20px; font-weight: 900; letter-spacing: -2px; }
-        .sp-text { color: var(--accent-blue); }
+        /* Brilho passando pelo logo */
+        .logo-container::after {
+            content: ''; position: absolute; top: 0; left: -150%;
+            width: 60%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+            transform: skewX(-20deg);
+            animation: shine 2s infinite;
+        }
 
-        input { background: rgba(255,255,255,0.08); border: 1px solid #333; padding: 18px; border-radius: 12px; color: white; font-size: 18px; width: 300px; margin: 25px 0; outline: none; text-align: center; }
-        .main-btn { background: var(--primary); color: white; border: none; padding: 18px 50px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
-        .main-btn:hover { background: #ff2a33; transform: scale(1.05); }
+        @keyframes shine { 0% { left: -150%; } 100% { left: 150%; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Elementos de Jogo */
-        #timer { position: absolute; top: 25px; left: 25px; font-size: 24px; color: white; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 15px 25px; border-radius: 50px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); }
-        #ranking-container { position: fixed; top: 25px; right: 25px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); color: white; padding: 20px; border-radius: 15px; z-index: 100; min-width: 200px; border: 1px solid rgba(255,255,255,0.1); }
+        /* --- INTERFACE DE LOGIN --- */
+        #ui-layer { position: fixed; inset: 0; z-index: 4000; background: radial-gradient(circle, #1a1a1a 0%, #000 100%); display: none; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(15px); padding: 50px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
         
-        #quiz-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 25px; width: 400px; display: none; z-index: 3000; box-shadow: 0 0 100px rgba(0,0,0,0.5); border-bottom: 8px solid var(--primary); }
-        .btn-resp { display: block; width: 100%; margin: 12px 0; padding: 15px; font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #eee; background: #fcfcfc; font-weight: 600; color: #333; }
+        input { background: rgba(255,255,255,0.1); border: 1px solid #333; padding: 15px; border-radius: 10px; color: white; font-size: 18px; width: 280px; margin: 20px 0; outline: none; text-align: center; }
+        .main-btn { background: var(--primary); color: white; border: none; padding: 15px 45px; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .main-btn:hover { transform: scale(1.05); background: #ff2a33; }
 
-        /* Loading Minimalista */
-        #loading-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.3s; }
-        .loader-bar { width: 0%; height: 3px; background: var(--primary); transition: width 0.2s; position: absolute; bottom: 0; left: 0; }
-        table { width: 100%; margin-top: 10px; font-size: 14px; }
-        td { padding: 4px 0; }
+        /* --- ELEMENTOS DO JOGO --- */
+        #timer { position: absolute; top: 25px; left: 25px; font-size: 22px; color: white; background: rgba(0,0,0,0.7); padding: 12px 20px; border-radius: 50px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); }
+        #quiz-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 20px; width: 380px; display: none; z-index: 3000; border-bottom: 8px solid var(--primary); }
+        .btn-resp { display: block; width: 100%; margin: 10px 0; padding: 15px; font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #ddd; background: #f9f9f9; font-weight: bold; }
+        
+        #ranking-container { position: fixed; top: 25px; right: 25px; background: rgba(0,0,0,0.7); color: white; padding: 15px; border-radius: 15px; z-index: 100; min-width: 150px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">
-        <div style="letter-spacing: 5px; font-weight: bold;">CARREGANDO...</div>
-        <div class="loader-bar" id="l-bar"></div>
+    <div id="intro-overlay">
+        <div class="logo-container">
+            <div class="logo-text">DETRAN<span class="sp-blue">SP</span></div>
+        </div>
+        <p style="color: white; opacity: 0.5; margin-top: 20px; letter-spacing: 3px; font-size: 12px;">SIMULADOR DE EXAME PRÁTICO</p>
     </div>
 
     <div id="ui-layer">
         <div class="glass-card">
-            <div class="logo-main">DETRAN<span class="sp-text">SP</span></div>
-            <input type="text" id="playerName" placeholder="Nome do Aluno" maxlength="25">
+            <h1 style="margin-bottom: 5px;">BEM-VINDO</h1>
+            <p style="opacity: 0.6; margin-top: 0;">Identifique-se para começar</p>
+            <input type="text" id="playerName" placeholder="Nome do Aluno" maxlength="20">
             <br>
-            <button class="main-btn" onclick="iniciarProva()">Entrar no Veículo</button>
+            <button class="main-btn" onclick="iniciarProva()">INICIAR TESTE</button>
         </div>
     </div>
 
     <div id="ranking-container">
-        <strong style="color: var(--accent-blue); font-size: 12px;">🏆 RECORDES</strong>
+        <strong style="color: var(--accent-blue)">🏆 RECORDES</strong>
         <table id="rankingTable"><tbody></tbody></table>
     </div>
 
     <div id="timer">00:00.0s</div>
 
     <div id="quiz-container">
-        <h3 id="pergunta-txt" style="color:#222; margin-top:0;">Pergunta</h3>
+        <h3 id="pergunta-txt" style="color:#333; margin-top:0;">Pergunta</h3>
         <div id="opcoes"></div>
     </div>
 
@@ -67,15 +86,16 @@
 
         let scene, camera, renderer, car, motorista = "";
         let startTime = null, etapaAtual = 0, emMovimento = false;
+        let modelosProntos = false;
         
         const rota = [
             { x: -114, z: 224, p: false }, 
-            { x: -50,  z: 224, p: true,  q: "Pare no sinal vermelho?", r: ["Sim", "Não"], c: 0 },
+            { x: -50,  z: 224, p: true,  q: "Sinal vermelho indica?", r: ["Pare", "Siga"], c: 0 },
             { x: 30,   z: 224, p: true,  q: "Cinto é obrigatório?", r: ["Sim", "Não"], c: 0 },
-            { x: 100,  z: 224, p: true,  q: "Velocidade alta é perigosa?", r: ["Sim", "Não"], c: 0 },
+            { x: 100,  z: 224, p: true,  q: "Beber e dirigir é?", r: ["Crime", "Permitido"], c: 0 },
             { x: 165,  z: 224, p: false }, 
-            { x: 165,  z: 110, p: true,  q: "Beber e dirigir?", r: ["Proibido", "Pode"], c: 0 },
-            { x: 165,  z: 10,  p: true,  q: "Fim do Teste!", r: ["Concluir", "Reiniciar"], c: 0, final: true }
+            { x: 165,  z: 110, p: true,  q: "Uso de celular ao volante?", r: ["Proibido", "Permitido"], c: 0 },
+            { x: 165,  z: 10,  p: true,  q: "Fim da prova!", r: ["Finalizar", "Reiniciar"], c: 0, final: true }
         ];
 
         function init() {
@@ -97,39 +117,42 @@
 
         function carregarModelos() {
             const loader = new GLTFLoader();
-            const lBar = document.getElementById('l-bar');
-
-            // Carrega cidade
             loader.load('city_-_cidade (2).glb', (gltf) => {
                 gltf.scene.traverse(obj => {
                     if(["fence", "barricade", "cone", "mureta", "machine", "soda"].some(n => obj.name.toLowerCase().includes(n))) obj.visible = false;
                 });
                 scene.add(gltf.scene);
-                lBar.style.width = "70%";
 
-                // Carrega carro
                 loader.load('low_poly_ferrari_roma.glb', (gC) => {
                     car = gC.scene;
                     car.scale.set(6, 6, 6);
                     car.position.set(rota[0].x, 0.15, rota[0].z);
                     scene.add(car);
-                    
-                    lBar.style.width = "100%";
-                    // SAÍDA IMEDIATA DO LOADING
-                    document.getElementById('loading-screen').style.opacity = '0';
-                    setTimeout(() => {
-                        document.getElementById('loading-screen').remove();
-                        document.getElementById('ui-layer').style.display = 'flex';
-                    }, 300);
+                    modelosProntos = true;
+                    verificarSaidaIntro();
                 });
             });
         }
 
+        function verificarSaidaIntro() {
+            // Espera pelo menos 2.5 segundos de slide antes de mostrar o menu
+            setTimeout(() => {
+                if(modelosProntos) {
+                    const intro = document.getElementById('intro-overlay');
+                    intro.style.opacity = '0';
+                    setTimeout(() => {
+                        intro.remove();
+                        document.getElementById('ui-layer').style.display = 'flex';
+                    }, 800);
+                }
+            }, 2500);
+        }
+
         window.iniciarProva = function() {
-            const name = document.getElementById('playerName').value;
-            if(name.length < 3) return alert("Digite o nome.");
+            const n = document.getElementById('playerName').value;
+            if(n.length < 3) return alert("Digite o nome.");
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-            motorista = name;
+            motorista = n;
             document.getElementById('ui-layer').style.display = 'none';
             emMovimento = true;
             startTime = Date.now();
@@ -146,7 +169,7 @@
                     localStorage.setItem('detranRanking', JSON.stringify(d));
                     location.reload();
                 } else { etapaAtual++; emMovimento = true; }
-            } else { alert("Atenção: Resposta errada!"); }
+            } else { alert("Atenção! Resposta incorreta."); }
         }
 
         function montarQuiz() {
